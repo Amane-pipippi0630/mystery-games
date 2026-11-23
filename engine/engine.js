@@ -376,6 +376,14 @@ function resume(snap) {
   if (ch().recap) showRecap();
 }
 
+// ---------- ほかのページへ移る ----------
+// 押したことが分かるように、ボタンと画面に「開いています…」を出してから移る
+function leave(url, btn) {
+  if (btn) { btn.classList.add('going'); btn.textContent = '開いています…'; }
+  document.body.classList.add('leaving');
+  setTimeout(() => { location.href = url; }, 150);
+}
+
 // ---------- タイトル ----------
 function toTitle() {
   closeModal();
@@ -387,7 +395,7 @@ function toTitle() {
   add('はじめから', newGame, 'primary');
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
-  if (D.hub) add('作品選択へ', () => { location.href = D.hub; });
+  if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget));
   t.classList.remove('hide');
 }
 function newGame() {
@@ -582,6 +590,7 @@ function preload() {
 }
 const preloaded = [];
 
+window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.remove('leaving'); toTitle(); } });
 document.title = D.title;
 window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog };
 preload().then(failed => {

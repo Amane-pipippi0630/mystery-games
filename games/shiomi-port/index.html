@@ -115,6 +115,10 @@ header{display:flex;align-items:center;justify-content:space-between}
 .nb-entry.chosen{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
 #cmd button{position:relative}
 #cmd .badge{position:absolute;top:7px;right:9px;background:var(--accent2);color:#fff;border-radius:999px;font-size:11px;font-weight:700;min-width:20px;padding:1px 6px;line-height:1.5}
+.big,.pill,#modal .row,.nb-tabs button,.nb-x{transition:transform .08s,filter .15s,background .15s}
+.big:active,.pill:active,#modal .row:not([disabled]):active,.nb-tabs button:active,.nb-x:active{transform:scale(.96);filter:brightness(1.25)}
+.big.going{filter:brightness(1.25);pointer-events:none}
+body.leaving::after{content:'開いています…';position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#0e1117cc;color:var(--text);font-size:15px;letter-spacing:.1em;animation:fade .2s}
 
 </style>
 </head>
@@ -509,6 +513,14 @@ function resume(snap) {
   if (ch().recap) showRecap();
 }
 
+// ---------- ほかのページへ移る ----------
+// 押したことが分かるように、ボタンと画面に「開いています…」を出してから移る
+function leave(url, btn) {
+  if (btn) { btn.classList.add('going'); btn.textContent = '開いています…'; }
+  document.body.classList.add('leaving');
+  setTimeout(() => { location.href = url; }, 150);
+}
+
 // ---------- タイトル ----------
 function toTitle() {
   closeModal();
@@ -520,7 +532,7 @@ function toTitle() {
   add('はじめから', newGame, 'primary');
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
-  if (D.hub) add('作品選択へ', () => { location.href = D.hub; });
+  if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget));
   t.classList.remove('hide');
 }
 function newGame() {
@@ -715,6 +727,7 @@ function preload() {
 }
 const preloaded = [];
 
+window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.remove('leaving'); toTitle(); } });
 document.title = D.title;
 window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog };
 preload().then(failed => {
