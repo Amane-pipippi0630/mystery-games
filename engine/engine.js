@@ -263,7 +263,7 @@ function accuse(p) {
   const A = ch().accuse;
   if (p === A.culprit) {
     const miss = (A.required || []).filter(x => !cond(x.if)).map(x => '・' + x.label);
-    if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n') }) });
+    if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n'), name: short(p) }) });
     autosave();
     return ending(A.ending);
   }

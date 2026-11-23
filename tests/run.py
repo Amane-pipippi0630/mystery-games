@@ -180,10 +180,15 @@ def assistant_points_to_unheard(b):
 
 @test
 def shiomi_wrong_and_missing(b):
-    """証拠が足りないときは逮捕できず、まちがえるとミスが数えられる"""
+    """証拠が足りないときは逮捕できず、足りないものは明かさない。疑いの晴れた人を選ぶとミス"""
     pg = new_shiomi(b)
     click(pg, "すいり", "片桐")
-    assert "足りないもの" in msg(pg)
+    m1 = msg(pg)
+    assert "まだそろっていません" in m1 and "動機" not in m1 and "鑑定" not in m1, m1
+    click(pg, "すいり", "隆")
+    m2 = msg(pg)
+    assert m2.replace("隆", "片桐") == m1, (m1, m2)  # 片桐だけ反応が違うと犯人が分かってしまう
+    assert state(pg)["v"]["miss"] == 0
     click(pg, "すいり", "沙織")
     assert state(pg)["v"]["miss"] == 1
     return pg.errs

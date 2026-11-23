@@ -71,7 +71,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `show` | `{人物id: {アイテムid: 返事}}` |
 | `look` | `{調べるものid: 返事}` |
 | `puzzles` | 番号入力の謎解き。`{id: {length, answer, label, prompt, display, success, fail, cancel}}` |
-| `accuse` | 犯人の指名。`{suspects, culprit, required, missingText, ending, wrong}` |
+| `accuse` | 犯人の指名。`{suspects, culprit, required, missingText, ending, wrong}`。犯人を選んだが `required` がそろっていないときは `missingText`（`{name}`・`{missing}` が使える）。`{missing}` で足りない証拠を並べると答えが分かってしまうので、ふつうは使わず、まだ疑いの晴れていない人と同じ文にする |
 | `talkDefault`・`showDefault` | 返事がないときの文。`{name}` が使える |
 | `recap` | 「これまでの話」。章のはじめと「つづきから」で表示し、手帳の「これまで」タブにも残る |
 
