@@ -377,7 +377,7 @@ def kamomejima_ch1(b):
     assert state(pg)["f"].get("dinner_called"), state(pg)["f"]
     click(pg, "つぎへ"); click(pg, "つぎへ")
     click(pg, "移動", "大食堂")
-    for _ in range(10):
+    for _ in range(11):
         click(pg, "つぎへ")
     assert state(pg)["f"].get("dinner_done")
     click(pg, "聞く", "タキ"); click(pg, "聞く", "浅見"); click(pg, "聞く", "浅見")
