@@ -104,3 +104,7 @@ header{display:flex;align-items:center;justify-content:space-between}
 .nb-contra .big[disabled]{opacity:.4}
 .nb-entry.selectable{cursor:pointer}
 .nb-entry.chosen{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+#cmd button{position:relative}
+#cmd button.new::after{content:'';position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--accent2);box-shadow:0 0 0 2px var(--panel2)}
+#cmd.list button.new::after{top:50%;transform:translateY(-50%);right:14px}
+#here span.new::before{content:'●';color:var(--accent2);margin-right:4px;font-size:10px;vertical-align:1px}

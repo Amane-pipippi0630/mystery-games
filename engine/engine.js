@@ -134,7 +134,13 @@ function renderScene() {
   const L = loc();
   updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
-  $('here').innerHTML = (L.people || []).map(p => `<span>${person(p).name}</span>`).join('');
+  renderPeople();
+}
+
+function renderPeople(heard) {
+  if (!S || !loc()) return;
+  heard = heard || heardSet();
+  $('here').innerHTML = (loc().people || []).map(p => `<span class="${hasNewTalk(p, heard) ? 'new' : ''}">${person(p).name}</span>`).join('');
 }
 
 const IC = {
@@ -162,7 +168,10 @@ function showItems() { say(S.items.length ? 'もちもの：\n' + S.items.map(i 
 // ---------- 行動 ----------
 function main() {
   if (S.done) return;
-  const cmds = [['いどう', moveMenu], ['きく', askMenu], ['しらべる', lookMenu], ['みせる', showMenu]];
+  const heard = heardSet();
+  const anyNew = (loc().people || []).some(p => hasNewTalk(p, heard));
+  const cmds = [['いどう', moveMenu], ['きく', askMenu, anyNew ? 'new' : ''], ['しらべる', lookMenu], ['みせる', showMenu]];
+  renderPeople(heard);
   if (ch().accuse) cmds.push(['すいり', accuseMenu]);
   cmds.push(['もちもの', showItems]);
   btns(cmds);
@@ -212,7 +221,24 @@ function moveTo(id) {
   if (r) { run(r.do); say(r.text); }
   after();
 }
-function askMenu() { btns([...(loc().people || []).map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
+// まだ聞いていない話があるか（次に返ってくる文が、まだ一度も表示されていなければ「ある」）
+function peekTalk(p) {
+  const e = (ch().talk || {})[p];
+  if (e == null) return null;
+  if (typeof e === 'string') return { text: e };
+  if (Array.isArray(e)) return e.find(r => cond(r.if)) || null;
+  if (e.seq) return e.seq[Math.min(S.seq['talk:' + p] || 0, e.seq.length - 1)];
+  return cond(e.if) ? e : null;
+}
+function hasNewTalk(p, heard) {
+  const r = peekTalk(p);
+  return !!(r && r.text && !heard.has(r.text));
+}
+const heardSet = () => new Set(S.log.map(e => e.t));
+function askMenu() {
+  const heard = heardSet();
+  btns([...(loc().people || []).map(p => [person(p).name, () => talk(p), hasNewTalk(p, heard) ? 'new' : '']), back], 'だれに聞く？（● まだ聞いていない話がある）');
+}
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
   const r = resolve(e, key);
