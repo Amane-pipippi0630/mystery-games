@@ -139,12 +139,45 @@ def chapters(b):
     click(pg, "しらべる", "箱"); click(pg, "つぎへ")
     assert "第二章" in pg.locator("#card").inner_text()
     pg.click("#card")
+    assert "箱から鍵" in pg.locator("#modal .recap").inner_text()  # これまでの話
+    pg.click("#modal >> text=つづける")
     assert state(pg)["chapter"] == "ch2"
     assert pg.evaluate("!!localStorage.getItem('mg:test-mini:chap:ch2')")
     click(pg, "すいり", "A")
     assert state(pg)["v"]["miss"] == 1
     click(pg, "すいり", "X"); click(pg, "つぎへ")
     assert "完 OK" in msg(pg)
+    return pg.errs
+
+
+@test
+def notebook(b):
+    """捜査手帳：証言カード、ピン留め、会話ログの絞り込みと検索、メモ"""
+    pg = new_shiomi(b)
+    click(pg, "きく", "マコト")
+    click(pg, "いどう", "居間"); click(pg, "きく", "ハル"); click(pg, "きく", "ハル"); click(pg, "きく", "沙織")
+    st = state(pg)
+    assert len(st["cards"]) == 3, st["cards"]
+    assert pg.locator("#nbn").inner_text() == "3"
+    pg.click("#nb")
+    assert pg.locator("#nbook .nb-entry").count() == 3
+    assert pg.locator("#nbn").inner_text() == ""  # 見たらバッジが消える
+    pg.locator("#nbook .nb-entry .pin").first.click()
+    assert state(pg)["cards"][0]["pin"] is True
+    pg.click("#nbook .nb-tabs >> text=会話ログ")
+    pg.select_option("#nbook select[data-k=who]", "ハル")
+    assert pg.locator("#nbook .nb-entry").count() == 2
+    pg.select_option("#nbook select[data-k=who]", "")
+    pg.fill("#nbook input[type=search]", "書斎")
+    n = pg.locator("#nbook .nb-entry").count()
+    assert n >= 1 and all("書斎" in t for t in pg.locator("#nbook .nb-entry .txt").all_inner_texts())
+    pg.click("#nbook .nb-tabs >> text=メモ")
+    pg.fill("#memo", "Kは誰？")
+    pg.wait_for_timeout(600)
+    pg.click("#nbook .nb-x")
+    pg.reload(); pg.click("text=つづきから")
+    assert state(pg)["memo"] == "Kは誰？"
+    assert state(pg)["cards"][0]["pin"] is True
     return pg.errs
 
 

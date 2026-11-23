@@ -1,9 +1,50 @@
 {
-  "id": "ch2", "label": "第二章", "title": "おわり",
-  "start": {"loc": "hall", "text": "広間に来た。"},
-  "locations": {"hall": {"name": "広間", "people": ["a", "x"], "objs": {}}},
-  "talk": {"a": "A「犯人はXだ」", "x": "X「…」"},
-  "accuse": {"suspects": ["a", "x"], "culprit": "x", "required": [{"if": "has:key", "label": "鍵"}],
-    "missingText": "足りない：{missing}", "ending": "end",
-    "wrong": {"a": {"text": "ちがう", "do": ["miss"]}}}
+  "id": "ch2",
+  "label": "第二章",
+  "title": "おわり",
+  "start": {
+    "loc": "hall",
+    "text": "広間に来た。"
+  },
+  "locations": {
+    "hall": {
+      "name": "広間",
+      "people": [
+        "a",
+        "x"
+      ],
+      "objs": {}
+    }
+  },
+  "talk": {
+    "a": {
+      "text": "A「犯人はXだ」",
+      "card": true
+    },
+    "x": "X「…」"
+  },
+  "accuse": {
+    "suspects": [
+      "a",
+      "x"
+    ],
+    "culprit": "x",
+    "required": [
+      {
+        "if": "has:key",
+        "label": "鍵"
+      }
+    ],
+    "missingText": "足りない：{missing}",
+    "ending": "end",
+    "wrong": {
+      "a": {
+        "text": "ちがう",
+        "do": [
+          "miss"
+        ]
+      }
+    }
+  },
+  "recap": "第一章で、箱から鍵を見つけた。"
 }

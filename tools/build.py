@@ -100,6 +100,8 @@ class Checker:
         self.effects(where, r.get("do"), ch)
         if not r.get("text") and not r.get("do"):
             self.err(where, "text も do もありません")
+        if r.get("card") is True and not r.get("text"):
+            self.err(where, "card: true には text が必要です（または card に要約を書く）")
 
 
 def gamedir(arg):

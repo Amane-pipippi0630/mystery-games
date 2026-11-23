@@ -71,6 +71,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `puzzles` | 番号入力の謎解き。`{id: {length, answer, label, prompt, display, success, fail, cancel}}` |
 | `accuse` | 犯人の指名。`{suspects, culprit, required, missingText, ending, wrong}` |
 | `talkDefault`・`showDefault` | 返事がないときの文。`{name}` が使える |
+| `recap` | 「これまでの話」。章のはじめと「つづきから」で表示し、手帳の「これまで」タブにも残る |
 
 ### 返事の書き方
 
@@ -84,6 +85,8 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 ```
 
 `text` が `名前「…」` の形なら、名前が話し手のタグとして表示される。
+
+ルールに `"card"` を付けると、その返事が**証言カード**として捜査手帳に残る。`"card": true` なら文をそのまま、`"card": "要約"` なら要約を記録する。カードには「誰が・どこで・何を言ったか」という事実だけを書き、「だから怪しい」のような結論は書かない。
 
 ### 条件
 
@@ -109,6 +112,18 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `puzzle:id` | 番号入力の謎解きを開く |
 | `chapter:章id` | 「つぎへ」のあと、その章を始める |
 | `ending:id` | 「つぎへ」のあと、エンディングへ |
+
+## 捜査手帳
+
+画面右上の「手帳」から開く。新しい証言カードがあると、数がバッジで出る。
+
+| タブ | 内容 |
+|---|---|
+| 証言カード | `card` の付いた返事。☆でピン留めでき、ピン留めだけに絞り込める |
+| 会話ログ | 表示した文すべて（新しい順）。ことば検索、話した人・場所・章で絞り込み、ピン留め |
+| もちもの | 持っているアイテム |
+| メモ | 自由に書けるメモ。ゲームの進み方には関係しない |
+| これまで | 今の章までの `recap` |
 
 ## セーブ
 
