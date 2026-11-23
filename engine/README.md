@@ -113,6 +113,27 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `chapter:章id` | 「つぎへ」のあと、その章を始める |
 | `ending:id` | 「つぎへ」のあと、エンディングへ |
 
+## 矛盾をつく
+
+証言カードを2枚選んで「この2つは食い違う」とつきつける仕組み。手帳の「証言カード」タブに「矛盾をつく」ボタンが出る（章に `contradictions` があり、カードが2枚以上あるとき）。
+
+```jsonc
+// 証言カードに cardId を付ける
+{"text": "片桐「薬には関わっていない」", "card": "薬には関わっていないと言った", "cardId": "katagiri_lie"}
+
+// 章の contradictions
+"contradictions": [{
+  "id": "lie",                                    // 解くと flag:contra_lie が立つ
+  "pairs": [["katagiri_lie", "haru_med"]],        // 正解の組み合わせ（順番は問わない。複数書ける）
+  "if": "here:law",                               // つきつけられる条件（相手がいる場所など）
+  "text": "片桐「…ああ、受け取りに行ったよ」",    // 正解のときの文
+  "do": ["toast:片桐のうそを崩した"],
+  "notYet": "本人に突きつけましょう",               // 組み合わせは正しいが if を満たさないとき（ミスにならない）
+  "doneText": "もう崩しましたよ"                    // 解いたあとにもう一度つきつけたとき
+}],
+"contradictWrong": "その2つは食い違っていないようです"  // まちがいのとき（ミス1回）
+```
+
 ## 捜査手帳
 
 画面右上の「手帳」から開く。新しい証言カードがあると、数がバッジで出る。

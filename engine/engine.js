@@ -181,7 +181,7 @@ function act(rule, meta) {
 function addCard(rule, meta) {
   const t = typeof rule.card === 'string' ? rule.card : rule.text;
   if (S.cards.some(c => c.t === t)) return;
-  S.cards.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t, pin: false });
+  S.cards.push({ id: rule.cardId || null, c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t, pin: false });
   toast('証言カードに記録した');
   updateNbBadge();
 }
@@ -381,6 +381,18 @@ function newGame() {
 function begin() { $('wrap').classList.remove('hide'); startChapter(D.start); }
 
 
+// ---------- 矛盾をつく ----------
+// 章の contradictions: [{id, pairs: [[カードid, カードid], ...], if, text, do}]
+function contradict(ids) {
+  const same = (p) => (p[0] === ids[0] && p[1] === ids[1]) || (p[0] === ids[1] && p[1] === ids[0]);
+  const list = ch().contradictions || [];
+  const hit = list.find(x => x.pairs.some(same));
+  if (hit && S.f['contra_' + hit.id]) return act({ text: hit.doneText || 'その食い違いは、もう明らかにした。' });
+  if (hit && cond(hit.if)) return act({ text: hit.text, do: [...(hit.do || []), 'flag:contra_' + hit.id] });
+  if (hit) return act({ text: hit.notYet || 'いまは、それをつきつける相手がいない。' });
+  act({ text: ch().contradictWrong || D.contradictWrong || 'その2つは、食い違っていないようだ…。', do: ['miss'] });
+}
+
 // ---------- 捜査手帳 ----------
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const placeName = (c, l) => { const C = D.chapters[c]; return (C && C.locations[l] && C.locations[l].name) || ''; };
@@ -400,8 +412,8 @@ function openNotebook(tab) {
   m.innerHTML = `<div class="nb-head"><h3>捜査手帳</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
-  m.querySelector('.nb-x').onclick = () => { m.remove(); };
-  m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; openNotebook(); });
+  m.querySelector('.nb-x').onclick = () => { nbSel = null; m.remove(); };
+  m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; nbSel = null; openNotebook(); });
   document.body.appendChild(m);
   const body = m.querySelector('.nb-body');
   ({ cards: nbCards, log: nbLog, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
@@ -414,16 +426,45 @@ function entryEl(e, onPin, isCard) {
   d.prepend(pinBtn(e.pin, onPin));
   return d;
 }
+let nbSel = null; // 矛盾をつくときに選んだカードの番号
 function nbCards(body) {
   S.seenCards = S.cards.length; updateNbBadge(); autosave();
-  const only = nbQ.pinCards;
+  const only = nbQ.pinCards && !nbSel;
+  if ((ch().contradictions || []).length && S.cards.length >= 2 && !S.done) {
+    const box = document.createElement('div'); box.className = 'nb-contra';
+    if (!nbSel) {
+      box.innerHTML = '<button class="big primary">矛盾をつく</button><small>食い違っている証言カードを2枚選んで、つきつける</small>';
+      box.querySelector('button').onclick = () => { nbSel = []; openNotebook(); };
+    } else {
+      box.innerHTML = `<div class="sel">食い違うカードを2枚選ぶ（${nbSel.length}/2）</div><div class="row2"><button class="big back">やめる</button><button class="big primary" ${nbSel.length === 2 ? '' : 'disabled'}>つきつける</button></div>`;
+      const [cancel, go] = box.querySelectorAll('button');
+      cancel.onclick = () => { nbSel = null; openNotebook(); };
+      go.onclick = () => {
+        const ids = nbSel.map(i => S.cards[i].id || ('#' + i)); nbSel = null;
+        $('nbook').remove(); contradict(ids);
+      };
+    }
+    body.appendChild(box);
+  }
   const bar = document.createElement('div'); bar.className = 'nb-bar';
   bar.innerHTML = `<label><input type="checkbox" ${only ? 'checked' : ''}> ピン留めだけ</label><span class="cnt">${S.cards.length}枚</span>`;
   bar.querySelector('input').onchange = e => { nbQ.pinCards = e.target.checked; openNotebook(); };
   body.appendChild(bar);
   const list = S.cards.filter(c => !only || c.pin);
   if (!list.length) body.insertAdjacentHTML('beforeend', '<p class="nb-empty">まだ証言カードはありません。大事な証言を聞くと、ここに記録されます。</p>');
-  list.forEach(c => body.appendChild(entryEl(c, () => { c.pin = !c.pin; autosave(); openNotebook(); }, true)));
+  list.forEach(c => {
+    const el = entryEl(c, () => { c.pin = !c.pin; autosave(); openNotebook(); }, true);
+    if (nbSel) {
+      const i = S.cards.indexOf(c);
+      el.classList.add('selectable'); if (nbSel.includes(i)) el.classList.add('chosen');
+      el.onclick = () => {
+        const k = nbSel.indexOf(i);
+        if (k >= 0) nbSel.splice(k, 1); else if (nbSel.length < 2) nbSel.push(i);
+        openNotebook();
+      };
+    }
+    body.appendChild(el);
+  });
 }
 function nbLog(body) {
   const whoSet = [...new Set(S.log.map(speaker).filter(Boolean))];
