@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>汐見港殺人事件</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;color:#fff;font-family:'DotGothic16',monospace;height:100%}
+body{display:flex;justify-content:center}
+#wrap{width:100%;max-width:560px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:100%}
+#scene{width:100%;aspect-ratio:16/9;border:3px solid #fff;background:#111;position:relative;overflow:hidden}
+#scene svg{width:100%;height:100%;display:block}
+#locname{position:absolute;left:6px;top:6px;background:#000c;padding:2px 8px;font-size:14px;border:1px solid #fff}
+#here{font-size:13px;color:#9cf;min-height:1.2em}
+#msg{border:3px solid #fff;padding:10px 12px;min-height:128px;font-size:16px;line-height:1.7;white-space:pre-wrap;cursor:pointer;position:relative}
+#msg.more::after{content:'▼';position:absolute;right:8px;bottom:4px;animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#cmd{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#cmd button,.big{font-family:inherit;font-size:16px;background:#000;color:#fff;border:2px solid #fff;padding:10px 4px;cursor:pointer}
+#cmd button:hover,#cmd button:focus-visible{background:#fff;color:#000;outline:none}
+#cmd button.back{color:#fc6;border-color:#fc6}
+#cmd .label{grid-column:1/-1;color:#fc6;font-size:14px}
+#pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#title{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:5;text-align:center;padding:20px}
+#title h1{font-size:34px;letter-spacing:4px;color:#f44;text-shadow:3px 3px 0 #600}
+#title p{color:#aaa;font-size:14px;line-height:1.8}
+#title .big{width:220px}
+.hide{display:none!important}
+footer{color:#666;font-size:11px;text-align:center;margin-top:auto;padding-top:6px}
+</style>
+</head>
+<body>
+<div id="title">
+  <div style="color:#9cf;font-size:14px">― 推理アドベンチャー ―</div>
+  <h1>汐見港<br>殺人事件</h1>
+  <p>港町・汐見で、水産会社の社長が<br>鍵のかかった書斎で死んでいた。<br>きみは警部として、相棒のマコトと<br>真相を追う。</p>
+  <button class="big" id="bNew">はじめから</button>
+  <button class="big hide" id="bCont">つづきから</button>
+</div>
+
+<div id="prologue" class="hide" style="position:fixed;inset:0;background:#000;z-index:6;overflow:auto;padding:24px 20px;display:flex;flex-direction:column;align-items:center">
+  <div style="max-width:520px;width:100%;line-height:1.9;font-size:15px">
+    <div style="color:#f44;font-size:22px;text-align:center;margin-bottom:14px">― あらすじ ―</div>
+    <p>11月のある朝、港町・汐見（しおみ）。<br>
+    地元の名士、汐見水産の社長・<b style="color:#fc6">黒木源三（くろき げんぞう）</b>が、自宅の書斎で死んでいるのが見つかった。</p><br>
+    <p>見つけたのは家政婦。書斎のドアにも窓にも、内側から鍵がかかっていた。机にはウイスキーのグラスがあるだけで、争ったあとはない。</p><br>
+    <p>自殺か、それとも密室殺人か――。<br>
+    きみは汐見署の<b style="color:#fc6">警部</b>として、新人刑事の<b style="color:#9cf">マコト</b>と捜査を始める。</p><br>
+    <div style="color:#fc6">◆ 関係者</div>
+    <p style="font-size:14px">
+    黒木 沙織 … 被害者の娘。昨日、結婚のことで父と喧嘩した<br>
+    田辺 ハル … 黒木家の家政婦。第一発見者<br>
+    黒木 隆 … 被害者の弟。借金を抱えている<br>
+    野村 … 汐見水産の社長秘書<br>
+    片桐 … 汐見水産の顧問弁護士。被害者の古い友人<br>
+    大場 … 汐見署の鑑識</p>
+    <div style="text-align:center;margin-top:20px"><button class="big" id="bGo">捜査開始</button></div>
+  </div>
+</div>
+
+<div id="wrap">
+  <div id="scene"><div id="svg"></div><div id="locname"></div></div>
+  <div id="here"></div>
+  <div id="msg"></div>
+  <div id="cmd"></div>
+  <footer>タップで文字送り / コマンドを選んで捜査しよう</footer>
+</div>
+
+<script>
+// ===== データ =====
+const ITEMS={capsule:'カプセル',memo:'机のメモ',ledger:'帳簿のコピー',report:'鑑定書'};
+const PEOPLE={makoto:'マコト',saori:'沙織',haru:'ハル',oba:'鑑識の大場',nomura:'秘書の野村',master:'雀荘の店主',takashi:'隆',pharm:'薬剤師',katagiri:'片桐'};
+const OBJ={body:'遺体の跡',desk:'机',medicine:'薬瓶',safe:'金庫',window:'窓',whisky:'ウイスキー',photoframe:'写真立て',phone:'電話',board:'掲示板',office:'社長室',docs:'書類',table:'雀卓',shelf:'薬棚',shelf2:'本棚',desk2:'机'};
+const LOC={
+ study:{name:'黒木邸・書斎',people:['makoto'],objs:['body','desk','medicine','safe','window','whisky']},
+ living:{name:'黒木邸・居間',people:['makoto','saori','haru'],objs:['photoframe','phone']},
+ station:{name:'汐見警察署',people:['makoto','oba'],objs:['board']},
+ company:{name:'汐見水産',people:['makoto','nomura'],objs:['office','docs']},
+ mahjong:{name:'雀荘「東風」',people:['makoto','master','takashi'],objs:['table']},
+ hospital:{name:'汐見病院・薬局',people:['makoto','pharm'],objs:['shelf']},
+ law:{name:'片桐法律事務所',people:['makoto','katagiri'],objs:['shelf2','desk2']},
+};
+const SUSPECTS=['saori','haru','nomura','takashi','katagiri','makoto'];
+
+let S;
+function fresh(){return {loc:'study',f:{},items:[],talk:{},turns:0,miss:0,wait:0,done:false}}
+const f=()=>S.f;
+const has=i=>S.items.includes(i);
+function give(i){if(!has(i))S.items.push(i)}
+function cnt(p){S.talk[p]=(S.talk[p]||0)+1;return S.talk[p]}
+function avail(l){
+ if(l==='mahjong')return !!f().know_tonpu;
+ if(l==='hospital')return !!f().katagiri_med;
+ if(l==='law')return !!f().know_katagiri;
+ return true;
+}
+function save(){try{localStorage.setItem('shiomi_save',JSON.stringify(S))}catch(e){}}
+function load(){try{const s=localStorage.getItem('shiomi_save');return s?JSON.parse(s):null}catch(e){return null}}
+
+// ===== 会話 =====
+const T={
+ makoto(){
+  if(!has('capsule'))return 'マコト「警部、まずはこの書斎をくまなく調べましょう。机の上の薬瓶なんか、気になりますね」';
+  if(!f().sent)return 'マコト「そのカプセル、署の大場さんに鑑定してもらいましょう！」';
+  if(!has('ledger'))return f().know_safe||f().hint_code?'マコト「金庫の番号…ご家族にちなんだ数字かもしれません。居間に何かないですかね」':'マコト「書斎の金庫が気になります。会社や家の人に話を聞いてみましょう」';
+  if(!f().know_katagiri)return 'マコト「あの薬、誰が用意したものなんでしょう？ 家政婦のハルさんに見せてみては？」';
+  if(!f().pharm)return 'マコト「薬をもらった病院で、カプセルを確かめてもらいましょう」';
+  if(!has('report'))return 'マコト「大場さんの鑑定、そろそろ結果が出てるんじゃないですか？」';
+  if(!f().motive)return 'マコト「帳簿の送金先がどこなのか…会社の人ならわかるかも」';
+  return 'マコト「動機、機会、手段。証拠はそろいました。『すいり』で犯人を指名しましょう、警部！」';
+ },
+ haru(){
+  const n=cnt('haru');
+  if(n===1)return 'ハル「今朝7時に書斎へお茶をお持ちしたら、鍵がかかっておりまして…。合鍵で開けたら、旦那さまが倒れておいででした」';
+  if(n===2){f().know_routine=1;return 'ハル「旦那さまは毎晩10時に心臓のお薬を飲まれて、それから書斎にこもって鍵をおかけになるのがお決まりでした」'}
+  if(n===3){f().know_takashi=1;return 'ハル「ゆうべは弟の隆さまがお金の無心に見えて…大声で言い争っておられました」'}
+  f().hint_code=1;return 'ハル「旦那さまは大事な番号を、いつもお嬢さまにちなんでお決めになっていましたねえ」';
+ },
+ saori(){
+  const n=cnt('saori');
+  if(n===1)return '沙織「父とは昨日、結婚のことで喧嘩しました。相手を認めてくれなくて…。でも、まさかこんな…」';
+  if(n===2){f().know_tonpu=1;return '沙織「叔父の隆？ 叔父ならたぶん、毎晩『東風（トンプー）』っていう雀荘にいます」\n\n（雀荘「東風」に行けるようになった）'}
+  return '沙織「ゆうべ10時ごろは自分の部屋にいました。書斎から物音はしなかったと思います」';
+ },
+ oba(){
+  if(has('report'))return '大場「毒は社長の胃からも出た。カプセルの中身と同じものだ。間違いない」';
+  if(f().sent&&S.wait>=1){give('report');return '大場「おう、出たぞ。あのカプセルの中身は薬じゃない、猛毒だ。外見だけ本物そっくりに作ってある」\n\n（鑑定書を手に入れた）'}
+  if(f().sent)return '大場「まだだ。ほかを回ってから、また来い」';
+  f().know_poison=1;
+  return '大場「死因は毒物による中毒だ。ところがウイスキーとグラスからは何も出なかった。毒の入れ物がどこかにあるはずだぞ」';
+ },
+ nomura(){
+  const n=cnt('nomura');
+  if(n===1)return '野村「社長は最近、会社のお金の流れを熱心に調べておられました。内容は誰にも教えてくださらなかったのですが」';
+  if(n===2){f().know_safe=1;return '野村「調べた資料はご自宅の金庫にしまってある、とおっしゃっていました」'}
+  f().know_katagiri=1;return '野村「会社の資金管理は、顧問弁護士の片桐先生にお任せしていました」\n\n（片桐法律事務所に行けるようになった）';
+ },
+ master(){f().alibi=1;return '店主「隆さん？ ゆうべは9時から朝の3時まで、ずっとここで打ってたよ。俺と客が証人だ」'},
+ takashi(){
+  const n=cnt('takashi');
+  if(n===1)return '隆「兄貴が死んだって？ …ふん、借金を断られたのは事実さ。だが、俺はやってねえ」';
+  return '隆「ゆうべは9時からずっとここだ。疑うならマスターに聞きな」';
+ },
+ pharm(){
+  f().pickup=1;
+  return '薬剤師「黒木源三さんのお薬ですね。先週の11月16日、代理で片桐さんという方が受け取りに来られました」';
+ },
+ katagiri(){
+  const n=cnt('katagiri');
+  if(n===1)return '片桐「源三が…。古い友人として、残念でならないよ」';
+  if(n===2)return '片桐「ゆうべ？ 9時には事務所を出て、自宅にいたよ。家内が証明してくれる」';
+  return '片桐「源三の薬？ ああ、頼まれて受け取りに行ったことはあるが…それが何か？」';
+ },
+};
+
+// ===== みせる =====
+const SHOW={
+ haru:{capsule:()=>{f().know_katagiri=1;f().katagiri_med=1;return 'ハル「そのお薬…先週、片桐先生がわざわざ病院からもらってきてくださったものです。旦那さまの古いご友人で、会社の顧問弁護士の先生ですよ」\n\n（汐見病院・片桐法律事務所に行けるようになった）'},
+       memo:()=>'ハル「K…でございますか。さあ、わたくしには…」'},
+ saori:{ledger:()=>'沙織「父が調べていたのは、これ…？」',
+        memo:()=>'沙織「K…。叔父も黒木だからKですけど…」'},
+ oba:{capsule:()=>{if(f().sent)return '大場「それはもう預かって鑑定中だ」';f().sent=1;S.wait=0;return '大場「ほう…色がほんのわずかに違うな。よし、鑑定に回そう。少し時間をくれ」'}},
+ nomura:{ledger:()=>{f().motive=1;f().know_katagiri=1;return '野村「この送金先…片桐先生の個人口座です！ 3年で3000万円以上…。社長はこれに気づいて…」\n\n（動機が見えてきた）'},
+         memo:()=>'野村「金曜…社長は金曜日に片桐先生とお会いになる予定でした」'},
+ takashi:{memo:()=>{f().know_katagiri=1;return '隆「K？ 俺じゃねえよ。兄貴は『金曜に片桐と話をつける』ってこぼしてたぜ」'}},
+ pharm:{capsule:()=>{f().pickup=1;f().pharm=1;return '薬剤師「これは…うちでお出ししたカプセルではありません。本物には小さな刻印があるんです。誰かが似たものとすり替えたんですよ」\n\n（すり替えの証言を得た）'}},
+ katagiri:{ledger:()=>'片桐「…これは何かの間違いだ。正式な手続きを経た送金だよ」\n\n（片桐の額に汗がにじんでいる）',
+           capsule:()=>'片桐「そんなカプセル、見たこともないね」',
+           report:()=>'片桐「毒…？ 私には関係のない話だ」'},
+ makoto:{capsule:()=>'マコト「一つだけ色が違うなんて、あやしいですね」',memo:()=>'マコト「K…イニシャルがKの人物を探しましょう」',ledger:()=>'マコト「送金先がどこなのか、会社の人に聞いてみては？」',report:()=>'マコト「やっぱり毒はカプセルに！」'},
+};
+
+// ===== しらべる =====
+const LOOK={
+ body:()=>'遺体はすでに運び出され、床にチョークの跡が残っている。社長は胸をおさえるように倒れていたらしい。死亡推定時刻は、ゆうべ10時ごろ。',
+ desk:()=>{if(has('memo'))return '書類が整然と並んでいる。';give('memo');return '机の上にメモがある。\n『金曜 Kと話をつける』\nKとは誰だ…？\n\n（机のメモを手に入れた）'},
+ medicine:()=>{if(has('capsule'))return '残りのカプセルは、ふつうに見える。';give('capsule');return '心臓の薬の瓶だ。中のカプセルをひとつずつ見ていくと…\n一つだけ、ほんのわずかに色の違うものがある！\n\n（カプセルを手に入れた）'},
+ safe:()=>{if(has('ledger'))return '金庫はもう空だ。';openPad();return null},
+ window:()=>'窓には内側から鍵がかかっている。ドアにも鍵がかかっていた。\n…密室だ。',
+ whisky:()=>'飲みかけのウイスキーとグラス。においをかいでも、変わったところはない。',
+ photoframe:()=>{f().photo=1;return '幼いころの沙織さんの写真だ。裏に何か書いてある…\n『沙織 誕生 7月14日』'},
+ phone:()=>'古い黒電話だ。',
+ board:()=>'指名手配のポスターが貼ってある。この事件とは関係なさそうだ。',
+ office:()=>{f().know_katagiri=1;return '社長の手帳が残っている。今週の金曜日の欄に『片桐』と書いてある。\n\n（片桐法律事務所に行けるようになった）'},
+ docs:()=>'決算書類の山だ。素人にはさっぱりわからない。',
+ table:()=>'ジャラジャラと牌の音がする。いまは事件に集中しよう。',
+ shelf:()=>'薬がずらりと並んでいる。',
+ shelf2:()=>'分厚い法律書がぎっしり並んでいる。',
+ desk2:()=>'高級な調度品ばかりだ。個人の事務所にしては、ずいぶん羽振りがいい。',
+};
+
+// ===== 表示 =====
+const $=id=>document.getElementById(id);
+let typer=null,full='';
+function say(t){
+ full=t;const m=$('msg');m.textContent='';m.classList.remove('more');
+ clearInterval(typer);let i=0;
+ typer=setInterval(()=>{i++;m.textContent=full.slice(0,i);if(i>=full.length){clearInterval(typer);typer=null}},28);
+}
+$('msg').onclick=()=>{if(typer){clearInterval(typer);typer=null;$('msg').textContent=full}};
+
+function render(){
+ const L=LOC[S.loc];
+ $('locname').textContent=L.name;
+ $('svg').innerHTML=SCENE[S.loc]();
+ $('here').textContent='ここにいる人：'+L.people.map(p=>PEOPLE[p]).join('、');
+ main();
+}
+function btns(list,label){
+ const c=$('cmd');c.innerHTML='';
+ if(label){const d=document.createElement('div');d.className='label';d.textContent=label;c.appendChild(d)}
+ list.forEach(([t,fn,cls])=>{const b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;b.onclick=fn;c.appendChild(b)});
+}
+const back=['もどる',()=>main(),'back'];
+function main(){
+ if(S.done)return;
+ btns([
+  ['いどう',moveMenu],['きく',askMenu],['しらべる',lookMenu],
+  ['みせる',showMenu],['すいり',accuseMenu],['もちもの',()=>{say(S.items.length?'もちもの：\n'+S.items.map(i=>'・'+ITEMS[i]).join('\n'):'何も持っていない。')}],
+ ]);
+}
+function act(t){if(t)say(t);S.turns++;save();main()}
+function moveMenu(){
+ const l=Object.keys(LOC).filter(k=>k!==S.loc&&avail(k));
+ btns([...l.map(k=>[LOC[k].name,()=>{S.loc=k;if(f().sent)S.wait++;S.turns++;save();render();say(ARRIVE[k]())}]),back],'どこへ行く？');
+}
+function askMenu(){btns([...LOC[S.loc].people.map(p=>[PEOPLE[p],()=>act(T[p]())]),back],'だれに聞く？')}
+function lookMenu(){btns([...LOC[S.loc].objs.map(o=>[OBJ[o],()=>{const r=LOOK[o]();if(r!==null)act(r)}]),back],'何を調べる？')}
+function showMenu(){
+ if(!S.items.length){say('見せるものを何も持っていない。');return}
+ btns([...S.items.map(i=>[ITEMS[i],()=>{
+  btns([...LOC[S.loc].people.map(p=>[PEOPLE[p],()=>{const h=SHOW[p]&&SHOW[p][i];act(h?h():PEOPLE[p].replace(/^.*の/,'')+'は、特に心当たりがないようだ。')}]),['もどる',showMenu,'back']],ITEMS[i]+'をだれに見せる？');
+ }]),back],'何を見せる？');
+}
+function openPad(){
+ let code='';
+ const draw=()=>{
+  btns([...'1234567890'.split('').map(d=>[d,()=>{code+=d;if(code.length<4){say('金庫の番号：'+code.padEnd(4,'＊'));draw()}else check()}]),['やめる',()=>{say('金庫から離れた。');main()},'back']],'4ケタの番号を入れよう');
+ };
+ const check=()=>{
+  if(code==='0714'){give('ledger');act('カチリ…金庫が開いた！\n中に帳簿のコピーがある。ある口座への送金が、何度も記されている。\n\n（帳簿のコピーを手に入れた）')}
+  else{act('金庫の番号：'+code+'\n…開かない。ちがうようだ。')}
+ };
+ say('ダイヤル式の金庫だ。4ケタの番号が必要らしい。\n金庫の番号：＊＊＊＊');draw();
+}
+function accuseMenu(){
+ btns([...SUSPECTS.map(p=>[PEOPLE[p].replace(/^.*の/,''),()=>accuse(p)]),back],'犯人はだれだ？');
+}
+function accuse(p){
+ if(p==='makoto'){S.miss++;act('マコト「け、警部！ ぼくじゃないですよぉ！」');return}
+ if(p==='katagiri'){
+  const miss=[];
+  if(!f().motive)miss.push('動機（帳簿の送金先）');
+  if(!f().pharm)miss.push('機会（カプセルのすり替え）');
+  if(!has('report'))miss.push('手段（毒の鑑定）');
+  if(miss.length){act('マコト「警部、まだ証拠が足りません。\n足りないもの：\n'+miss.map(x=>'・'+x).join('\n')+'」');return}
+  ending();return;
+ }
+ S.miss++;
+ if(p==='takashi'){act(f().alibi?'マコト「隆さんは雀荘で一晩じゅう打っていた。アリバイは完璧ですよ」':'マコト「隆さんのアリバイ、まだ確かめていませんよ。雀荘に行ってみては？」');return}
+ const r={saori:'マコト「沙織さんにお父さんを殺す手段があったとは思えません」',haru:'マコト「ハルさんは第一発見者ですけど、動機が見当たりませんよ」',nomura:'マコト「野村さんは社長の調査を手伝っていたくらいです。動機がありません」'};
+ act(r[p]);
+}
+const ARRIVE={
+ study:()=>'黒木邸の書斎にやってきた。',
+ living:()=>'居間には、娘の沙織と家政婦のハルがいる。',
+ station:()=>'汐見警察署。鑑識の大場がいる。',
+ company:()=>'汐見水産の本社。潮のにおいがする。秘書の野村が出迎えた。',
+ mahjong:()=>'たばこの煙が立ちこめる雀荘「東風」。奥の卓に被害者の弟・隆がいる。',
+ hospital:()=>'汐見病院の薬局にやってきた。',
+ law:()=>'片桐法律事務所。弁護士の片桐が、にこやかに迎えた。',
+};
+
+// ===== エンディング =====
+function ending(){
+ S.done=true;S.loc='law';save();
+ $('locname').textContent='片桐法律事務所';$('svg').innerHTML=SCENE.law();
+ $('here').textContent='';
+ const pages=[
+  'きみは片桐に、帳簿のコピー、薬剤師の証言、そして鑑定書をつきつけた。',
+  '片桐「……」',
+  '片桐「源三は、私の横領に気づいた。金曜にすべてを公にすると言ってきたよ」',
+  '片桐「先週、薬を受け取ったとき、一錠だけすり替えておいた。いつ飲むかはわからない。だが毎晩一錠ずつ飲むあいつは、いつか必ずそれを飲む」',
+  '片桐「鍵をかけた書斎で、ひとりで。…私はその夜、家にいるだけでよかったんだ」',
+  'マコト「密室なんかじゃなかった。社長は自分で鍵をかけて、自分で毒を飲まされたんですね…」',
+  'こうして、汐見港殺人事件は幕を閉じた。',
+ ];
+ let k=0;
+ const next=()=>{
+  if(k<pages.length){say(pages[k++]);btns([['つぎへ',next]]);if(k===pages.length-0){}}
+  else{
+   $('svg').innerHTML=SCENE.ending();$('locname').textContent='事件解決';
+   const rank=S.miss===0&&S.turns<70?'名警部':S.miss<=2?'敏腕刑事':'がんばった刑事';
+   say('～ 完 ～\n\n行動回数：'+S.turns+'\nまちがった指名：'+S.miss+'回\n評価：'+rank+'\n\n遊んでくれてありがとう！');
+   btns([['もういちど遊ぶ',()=>{S=fresh();save();start()}]]);
+  }
+ };
+ next();
+}
+
+// ===== 画面（ドット絵） =====
+const R=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
+const svg=b=>`<svg viewBox="0 0 320 180" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${b}</svg>`;
+const TX=(x,y,t,c,s)=>`<text x="${x}" y="${y}" fill="${c}" font-size="${s||12}" font-family="DotGothic16,monospace" text-anchor="middle">${t}</text>`;
+function books(x,y){let s='';const c=['#a33','#36a','#3a6','#ca3','#839','#a63'];for(let r=0;r<4;r++)for(let i=0;i<10;i++)s+=R(x+4+i*7,y+6+r*26,6,20,c[(i+r*3)%6]);return s}
+const SCENE={
+ study:()=>svg(R(0,0,320,130,'#3a2418')+R(0,130,320,50,'#5a3a22')+R(0,128,320,4,'#2a160c')
+  +R(20,14,80,112,'#2a160c')+books(20,14)
+  +R(140,20,70,60,'#c9a86a')+R(144,24,62,52,'#0b1640')+R(174,24,2,52,'#c9a86a')+R(144,49,62,2,'#c9a86a')+R(190,30,8,8,'#fff6a0')+R(146,60,2,2,'#fff')+R(160,34,2,2,'#fff')
+  +R(230,80,80,10,'#6b3a1a')+R(236,90,8,40,'#4a2810')+R(296,90,8,40,'#4a2810')+R(250,70,8,10,'#d8e8f0')+R(268,66,10,14,'#8a5a1a')+R(270,62,6,4,'#8a5a1a')
+  +R(244,96,40,30,'#555')+R(260,104,8,8,'#aaa')
+  +`<polyline points="90,160 110,150 140,152 160,146 175,158 150,166 120,170 95,168 90,160" fill="none" stroke="#fff" stroke-width="2"/>`),
+ living:()=>svg(R(0,0,320,130,'#4a3a2a')+R(0,130,320,50,'#6a2a2a')+R(0,128,320,4,'#2a1a10')
+  +R(40,26,44,54,'#c9a86a')+R(46,32,32,42,'#c8d8e8')+R(56,42,12,12,'#f0c8a0')+R(54,40,16,6,'#222')+R(54,56,16,18,'#e88')
+  +R(110,90,120,40,'#8a1a1a')+R(104,80,132,16,'#a02020')+R(104,96,10,34,'#8a1a1a')+R(226,96,10,34,'#8a1a1a')
+  +R(260,104,40,6,'#6b3a1a')+R(266,110,4,24,'#4a2810')+R(290,110,4,24,'#4a2810')+R(268,94,24,10,'#111')+R(272,90,16,4,'#111')
+  +R(274,30,24,20,'#f0e0a0')+R(284,50,4,40,'#888')),
+ station:()=>svg(R(0,0,320,180,'#2a3a6a')+R(0,0,320,40,'#e07a4a')+R(0,40,320,30,'#a05a6a')
+  +R(60,50,200,110,'#8a8a8a')+R(60,46,200,8,'#6a6a6a')+[0,1,2,3].map(i=>R(76+i*46,70,30,24,'#ffe08a')).join('')+[0,1,2,3].map(i=>R(76+i*46,104,30,24,'#ffe08a')).join('')
+  +R(140,130,40,30,'#333')+R(110,56,100,14,'#fff')+TX(160,67,'汐見警察署','#000',11)+R(154,38,12,10,'#f22')
+  +R(0,160,320,20,'#444')),
+ company:()=>svg(R(0,0,320,90,'#7ac0f0')+R(0,90,320,40,'#2a6ab0')+R(0,96,320,2,'#8ad')+R(0,110,320,2,'#8ad')
+  +R(30,50,150,110,'#d8d0c0')+[0,1,2].map(r=>[0,1,2,3,4].map(i=>R(42+i*28,64+r*28,18,16,'#4a7aa0')).join('')).join('')
+  +R(40,40,130,14,'#1a3a6a')+TX(105,51,'汐見水産','#fff',11)
+  +R(0,130,320,50,'#8a7a6a')+R(220,100,70,20,'#fff')+R(230,92,30,10,'#fff')+R(240,80,4,14,'#a33')
+  +`<polyline points="230,30 236,26 242,30 248,26 254,30" fill="none" stroke="#fff" stroke-width="2"/>`),
+ mahjong:()=>svg(R(0,0,320,180,'#1a1a1a')+R(110,10,100,30,'#300')+R(114,14,92,22,'#000')+TX(160,31,'雀荘 東風','#f4a',14)
+  +R(150,40,20,6,'#555')+R(156,46,8,8,'#ffe08a')+`<polygon points="120,60 200,60 220,90 100,90" fill="#ffe08a" opacity=".15"/>`
+  +R(80,100,160,50,'#0a6a3a')+R(76,96,168,6,'#6b3a1a')+[0,1,2,3,4,5,6,7,8].map(i=>R(100+i*14,112,10,14,'#f0f0e0')).join('')
+  +R(250,70,30,40,'#556')+R(256,58,18,14,'#f0c8a0')+R(254,54,22,6,'#333')
+  +`<polyline points="40,90 44,80 40,70 46,60" fill="none" stroke="#aaa" stroke-width="2" opacity=".6"/>`),
+ hospital:()=>svg(R(0,0,320,180,'#cfe8f0')+R(40,30,240,130,'#f4f4f4')+R(140,40,40,40,'#fff')+R(155,44,10,32,'#e22')+R(144,55,32,10,'#e22')
+  +[0,1,2,3,4].map(i=>R(56+i*44,96,28,22,'#9cd')).join('')+R(140,124,40,36,'#7ab')+R(0,160,320,20,'#999')
+  +R(40,86,240,4,'#ccc')),
+ law:()=>svg(R(0,0,320,130,'#2a3a3a')+R(0,130,320,50,'#3a2a20')+R(0,128,320,4,'#111')
+  +R(10,14,80,112,'#2a160c')+books(10,14)+R(230,14,80,112,'#2a160c')+books(230,14)
+  +R(110,30,100,56,'#9ab')+R(114,34,92,48,'#bcd')+TX(160,63,'片桐法律事務所','#234',10)
+  +R(100,96,120,10,'#5a2a10')+R(106,106,8,30,'#3a1a08')+R(206,106,8,30,'#3a1a08')+R(140,88,16,8,'#ccc')+R(170,86,4,10,'#da3')
+  +R(146,108,28,8,'#000')),
+ ending:()=>svg(R(0,0,320,60,'#2a2a6a')+R(0,60,320,40,'#c86a6a')+R(0,90,320,10,'#f0a060')+R(140,78,40,22,'#ffd070')
+  +R(0,100,320,80,'#1a3a6a')+[0,1,2,3,4,5].map(i=>R(20+i*50,110+i%3*18,30,2,'#f0a060')).join('')
+  +R(130,104,60,2,'#ffd070')+R(140,114,40,2,'#ffd070')+TX(160,40,'事件解決','#fff',20)),
+};
+
+// ===== 開始 =====
+function start(){
+ $('title').classList.add('hide');
+ render();
+ if(S.turns===0){
+  say('マコト「警部、おはようございます！ 現場はこちらです。さっそく捜査を始めましょう」');
+ } else say('捜査を再開した。');
+}
+const saved=load();
+if(saved&&!saved.done&&saved.turns>0)$('bCont').classList.remove('hide');
+$('bNew').onclick=()=>{S=fresh();save();$('title').classList.add('hide');$('prologue').classList.remove('hide')};
+$('bGo').onclick=()=>{$('prologue').classList.add('hide');start()};
+$('bCont').onclick=()=>{S=saved;start()};
+</script>
+</body>
+</html>
