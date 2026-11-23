@@ -263,7 +263,7 @@ function accuse(p) {
   const A = ch().accuse;
   if (p === A.culprit) {
     const miss = (A.required || []).filter(x => !cond(x.if)).map(x => '・' + x.label);
-    if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n') }) });
+    if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n'), name: short(p) }) });
     autosave();
     return ending(A.ending);
   }
@@ -385,6 +385,7 @@ function toTitle() {
   add('はじめから', newGame, 'primary');
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
+  if (D.hub) add('作品選択へ', () => { location.href = D.hub; });
   t.classList.remove('hide');
 }
 function newGame() {
