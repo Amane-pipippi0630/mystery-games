@@ -185,6 +185,17 @@ def check(g):
             if len(P["answer"]) != P["length"]:
                 c.err(f"{w}.puzzles.{pid}", "answer の長さが length と合いません")
             c.rule(f"{w}.puzzles.{pid}.success", P["success"], ch)
+        card_ids = set(re.findall(r'"cardId":\s*"([^"]+)"', json.dumps(ch, ensure_ascii=False)))
+        for i, x in enumerate(ch.get("contradictions", [])):
+            wx = f"{w}.contradictions[{i}]"
+            if not re.match(r"^[A-Za-z0-9_\-]+$", x.get("id", "")):
+                c.err(wx, "id は英数字で書きます")
+            for pair in x.get("pairs", []):
+                for cid_ in pair:
+                    if cid_ not in card_ids:
+                        c.err(wx, f"証言カード {cid_} がありません（cardId を付けたルールが必要）")
+            c.cond(wx, x.get("if"), ch)
+            c.effects(wx, x.get("do"), ch)
         A = ch.get("accuse")
         if A:
             for p in A["suspects"]:

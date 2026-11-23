@@ -40,6 +40,15 @@ def msg(pg):
     return pg.locator("#msg").inner_text()
 
 
+def contra(pg, a, b):
+    """手帳を開き、文に a・b を含むカードを選んでつきつける"""
+    pg.click("#nb"); pg.click("#nbook .nb-tabs >> text=証言カード")
+    pg.click("#nbook .nb-contra >> text=矛盾をつく")
+    for t in (a, b):
+        pg.locator("#nbook .nb-entry", has_text=t).first.click()
+    pg.click("#nbook .nb-contra >> text=つきつける")
+
+
 def state(pg):
     return pg.evaluate("window.__mg.state")
 
@@ -67,6 +76,11 @@ def shiomi_clear(b):
     click(pg, "いどう", "汐見病院"); click(pg, "みせる", "カプセル", "薬剤師")
     click(pg, "いどう", "汐見警察署"); click(pg, "きく", "大場")
     assert "report" in state(pg)["items"]
+    click(pg, "いどう", "片桐法律事務所")
+    for _ in range(3):
+        click(pg, "きく", "片桐")
+    contra(pg, "何も関わっていない", "病院からもらってきた")
+    assert state(pg)["f"].get("contra_lie") == 1
     click(pg, "すいり", "片桐")
     for _ in range(7):
         click(pg, "つぎへ")
@@ -115,6 +129,51 @@ def unlock_once(b):
     log = pg.evaluate("window.__mg.toastLog")
     assert log.count("片桐法律事務所に行けるようになった") == 1, log
     assert log.count("汐見病院・薬局に行けるようになった") == 1, log
+    return pg.errs
+
+
+@test
+def contradiction(b):
+    """矛盾をつく：まちがえるとミス、相手がいない場所では使えず、片桐の前でつきつけると崩せる"""
+    pg = new_shiomi(b)
+    click(pg, "しらべる", "薬瓶"); click(pg, "しらべる", "遺体の跡")
+    click(pg, "いどう", "居間"); click(pg, "みせる", "カプセル", "ハル")
+    click(pg, "いどう", "汐見水産"); click(pg, "しらべる", "社長室")
+    click(pg, "いどう", "片桐法律事務所")
+    for _ in range(3):
+        click(pg, "きく", "片桐")
+    contra(pg, "胸をおさえて", "金曜の欄")
+    assert state(pg)["v"]["miss"] == 1
+    click(pg, "いどう", "書斎")
+    contra(pg, "何も関わっていない", "病院からもらってきた")
+    assert "法律事務所へ" in msg(pg) and state(pg)["v"]["miss"] == 1
+    assert not state(pg)["f"].get("contra_lie")
+    click(pg, "いどう", "片桐法律事務所")
+    contra(pg, "病院からもらってきた", "何も関わっていない")
+    assert state(pg)["f"].get("contra_lie") == 1
+    contra(pg, "病院からもらってきた", "何も関わっていない")
+    assert "もう崩しました" in msg(pg) and state(pg)["v"]["miss"] == 1
+    return pg.errs
+
+
+@test
+def assistant_points_to_unheard(b):
+    """マコトに聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる"""
+    pg = new_shiomi(b)
+    click(pg, "いどう", "居間")
+    click(pg, "きく", "マコト")
+    m = msg(pg)
+    assert "沙織さんはまだ何か知っていそう" in m, m
+    for _ in range(2):
+        click(pg, "きく", "沙織")
+    click(pg, "きく", "マコト")
+    assert "ハルさんはまだ何か知っていそう" in msg(pg)
+    for _ in range(4):
+        click(pg, "きく", "ハル")
+    click(pg, "きく", "マコト")
+    m = msg(pg)
+    assert "知っていそう" not in m, m  # 残っていなければ、ふだんのヒントに戻る
+    assert pg.locator("#cmd button.new, #here span.new").count() == 0
     return pg.errs
 
 
