@@ -21,6 +21,10 @@ h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:38px;letter-spa
 .sec{color:var(--sub);font-size:12px;letter-spacing:.2em;margin:22px 2px 10px}
 .game{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:12px;cursor:pointer;position:relative}
 .game:hover{border-color:var(--accent)}
+.game{transition:transform .08s,filter .15s,border-color .15s}
+.game:active{transform:scale(.98);filter:brightness(1.2)}
+.game.going{border-color:var(--accent);filter:brightness(1.2)}
+.game.going .img::before{content:'開いています…';position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;background:#0e1117aa;color:#fff;font-size:15px;font-weight:700;letter-spacing:.1em}
 .game .img{aspect-ratio:16/7;background:linear-gradient(135deg,#2a3348,#151a24);background-size:cover;background-position:center;position:relative}
 .game .img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,#171b24 100%)}
 .game .body{padding:2px 16px 15px;position:relative}
@@ -76,7 +80,8 @@ function card(g, opt = {}) {
   b.onclick = () => {
     if (opt.locked) return toast('三部作をすべてクリアすると開きます');
     if (soon) return toast('ただいま準備中です');
-    location.href = g.path;
+    b.classList.add('going'); document.querySelectorAll('.game').forEach(x => x.disabled = true);
+    setTimeout(() => { location.href = g.path; }, 150);
   };
   return b;
 }
@@ -93,6 +98,8 @@ if (others.length) {
   others.forEach(g => w.appendChild(card(g)));
 }
 w.insertAdjacentHTML('beforeend', '<footer>進み具合とクリアの記録は、このブラウザに保存されます。</footer>');
+// 「戻る」で戻ってきたとき、押した状態が残らないようにする
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 // サムネイルを先に読み込んでおく
 H.games.forEach(g => { if (g.thumbUrl) new Image().src = g.thumbUrl; });
 })();
