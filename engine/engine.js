@@ -138,34 +138,34 @@ function renderScene() {
 }
 
 const IC = {
-  'いどう': '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
-  'きく': '<path d="M4 5h16v11H9l-5 4z"/>',
-  'しらべる': '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
-  'みせる': '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
-  'すいり': '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
-  'もちもの': '<path d="M4 8h16l-1.5 12h-13z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  '移動': '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  '聞く': '<path d="M4 5h16v11H9l-5 4z"/>',
+  '調べる': '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+  '見せる': '<rect x="3" y="8" width="11" height="13" rx="2"/><path d="M13 3h8v8M21 3l-9 9"/>',
+  '推理': '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
+  '手帳': '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h5M10 12h5"/>',
 };
 function btns(list, label, mode) {
   const c = $('cmd'); c.innerHTML = ''; c.className = mode || (label ? 'list' : '');
   if (label) { const d = document.createElement('div'); d.className = 'label'; d.textContent = label; c.appendChild(d); }
   list.forEach(([t, fn, cls]) => {
     const b = document.createElement('button');
-    b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>`;
+    b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>` + (t === '手帳' && !label ? '<b id="nbn" class="badge"></b>' : '');
     if (cls) b.className = cls;
     b.onclick = fn; c.appendChild(b);
   });
 }
 const back = ['もどる', () => main(), 'back'];
 const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
-function showItems() { say(S.items.length ? 'もちもの：\n' + S.items.map(i => '・' + D.items[i]).join('\n') : 'まだ何も持っていない。'); }
 
 // ---------- 行動 ----------
 function main() {
   if (S.done) return;
-  const cmds = [['いどう', moveMenu], ['きく', askMenu], ['しらべる', lookMenu], ['みせる', showMenu]];
-  if (ch().accuse) cmds.push(['すいり', accuseMenu]);
-  cmds.push(['もちもの', showItems]);
+  const cmds = [['移動', moveMenu], ['聞く', askMenu], ['調べる', lookMenu], ['見せる', showMenu]];
+  if (ch().accuse) cmds.push(['推理', accuseMenu]);
+  cmds.push(['手帳', () => openNotebook()]);
   btns(cmds);
+  updateNbBadge();
 }
 // 行けるようになった場所は、エンジンが自動で知らせる（シナリオに toast を書かなくてよい）
 const openLocs = () => Object.keys(ch().locations).filter(k => avail(k));
@@ -257,7 +257,10 @@ function showMenu() {
 }
 function accuseMenu() {
   const A = ch().accuse;
-  btns([...A.suspects.map(p => [short(p), () => accuse(p)]), back], A.prompt || '犯人はだれだ？');
+  // 一度でも話を聞いた人だけが選べる
+  const list = A.suspects.filter(p => (S.seq['talk:' + p] || 0) > 0);
+  if (!list.length) { say(A.noneText || 'まだ、だれにも話を聞いていない。'); return; }
+  btns([...list.map(p => [short(p), () => accuse(p)]), back], A.prompt || '犯人はだれだ？');
 }
 function accuse(p) {
   const A = ch().accuse;
@@ -360,7 +363,6 @@ $('menu').onclick = () => {
     { t: 'タイトルへ', s: '進み具合はオートセーブされています', fn: () => { closeModal(); toTitle(); } },
   ]);
 };
-$('nb').onclick = () => { if (S) openNotebook(); };
 
 function resume(snap) {
   closeModal();
@@ -421,9 +423,10 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const placeName = (c, l) => { const C = D.chapters[c]; return (C && C.locations[l] && C.locations[l].name) || ''; };
 const speaker = e => e.p ? person(e.p).name : ((e.t.match(/^([^「\n]{1,10})「/) || [])[1] || '');
 function updateNbBadge() {
+  const e = $('nbn'); if (!e) return;
   const n = S ? S.cards.length - (S.seenCards || 0) : 0;
-  $('nbn').textContent = n > 0 ? n : '';
-  $('nbn').style.display = n > 0 ? '' : 'none';
+  e.textContent = n > 0 ? n : '';
+  e.style.display = n > 0 ? '' : 'none';
 }
 let nbTab = 'cards', nbQ = { who: '', place: '', ch: '', pin: false, q: '' };
 function openNotebook(tab) {
