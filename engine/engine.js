@@ -26,6 +26,8 @@ let pending = {};
 const fresh = () => ({ chapter: D.start, loc: null, f: {}, v: { turns: 0, miss: 0 }, items: [], seq: {}, done: false, log: [], cards: [], memo: '', seenCards: 0 });
 const ch = () => D.chapters[S.chapter];
 const loc = () => ch().locations[S.loc];
+// 場所にいる人。{"id": "...", "if": "条件"} で、場面によって出入りさせられる
+const here = (L = loc()) => (L.people || []).filter(p => typeof p === 'string' || cond(p.if)).map(p => typeof p === 'string' ? p : p.id);
 const person = p => D.people[p] || { name: p };
 const short = p => person(p).short || person(p).name;
 const fmt = (t, o) => String(t).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] : m));
@@ -94,6 +96,8 @@ function run(list) {
       case 'puzzle': pending.puzzle = a; break;
       case 'ending': pending.ending = a; break;
       case 'chapter': pending.chapter = a; break;
+      case 'event': pending.event = a; break;
+      case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
     }
   }
@@ -134,7 +138,7 @@ function renderScene() {
   const L = loc();
   updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
-  $('here').innerHTML = (L.people || []).map(p => `<span>${person(p).name}</span>`).join('');
+  $('here').innerHTML = here(L).map(p => `<span>${person(p).name}</span>`).join('');
 }
 
 const IC = {
@@ -193,7 +197,13 @@ function after() {
     openBefore = null;
   }
   if (p.goto) { S.loc = p.goto; renderScene(); }
+  // 自動の進行：条件がそろったトリガーを1つだけ動かす（トリガーには once 用のフラグを do に入れておく）
+  if (!p.event && !p.ending && !p.chapter && !p.puzzle) {
+    const t = (ch().triggers || []).find(r => cond(r.if));
+    if (t) { pending = {}; run(t.do); Object.assign(p, pending); pending = {}; }
+  }
   autosave();
+  if (p.event) return playEvent(p.event);
   if (p.puzzle) return openPuzzle(p.puzzle);
   if (p.ending) return nextBtn(() => ending(p.ending));
   if (p.chapter) return nextBtn(() => startChapter(p.chapter));
@@ -226,11 +236,11 @@ function hasNewTalk(p, heard) {
   return !!(r && r.text && r.card && !heard.has(r.text));
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
-function askMenu() { btns([...(loc().people || []).map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
+function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
 function assistantHint() {
   const heard = heardSet();
-  const q = (loc().people || []).find(p => p !== D.assistant && hasNewTalk(p, heard));
+  const q = here().find(p => p !== D.assistant && hasNewTalk(p, heard));
   return q ? { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) } : null;
 }
 function talk(p) {
@@ -249,7 +259,7 @@ function look(o) {
 function showMenu() {
   if (!S.items.length) { say('見せるものを何も持っていない。'); return; }
   btns([...S.items.map(i => [D.items[i], () => {
-    btns([...(loc().people || []).map(p => [person(p).name, () => {
+    btns([...here().map(p => [person(p).name, () => {
       const r = resolve(((ch().show || {})[p] || {})[i], 'show:' + p + ':' + i);
       act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) }, { p });
     }]), ['もどる', showMenu, 'back']], D.items[i] + 'をだれに見せる？');
@@ -271,6 +281,20 @@ function accuse(p) {
     return ending(A.ending);
   }
   act(resolve((A.wrong || {})[p], 'accuse:' + p) || { text: A.wrongDefault || 'ちがうようだ。', do: ['miss'] });
+}
+
+// ---------- イベント（何ページか続けて見せる場面） ----------
+// 章の events: {id: {bg, place, pages: [文...], do: [最後に行う効果]}}
+function playEvent(id) {
+  const E = ch().events[id];
+  if (E.bg || E.place) setScene(E.bg || loc().bg, E.place || loc().name, ch().label || '現在地');
+  let k = 0;
+  const next = () => {
+    if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
+    pending = {}; openBefore = openLocs(); run(E.do);
+    renderScene(); after();
+  };
+  next();
 }
 
 // ---------- 謎解き（番号入力） ----------
@@ -304,7 +328,7 @@ function startChapter(id) {
 // ---------- エンディング ----------
 function ending(id) {
   const E = D.endings[id];
-  S.done = true; markCleared(); autosave();
+  S.done = true; if (E.clear !== false) markCleared(); autosave();
   setScene(E.bg, E.place, E.small);
   $('here').innerHTML = '';
   let k = 0;
@@ -312,7 +336,7 @@ function ending(id) {
     if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
     setScene(E.finalBg || E.bg, E.finalPlace || '', E.finalSmall || '');
     const rank = ((E.ranks || []).find(r => cond(r.if)) || {}).label || '';
-    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank }));
+    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec) }));
     btns([['タイトルへ', toTitle, 'primary']], null, 'one');
   };
   next();
@@ -360,6 +384,7 @@ $('menu').onclick = () => {
   modal('メニュー', [
     { t: 'セーブ', s: '今の状態をスロットに保存', off: S.done, fn: saveMenu },
     { t: 'ロード', s: 'オートセーブ・章のはじめ・スロットから', fn: () => modal('ロード', loadList()) },
+    { t: 'プレイ時間', s: hm(S.v.playSec) + '（操作のない時間は数えません）', off: true },
     { t: 'タイトルへ', s: '進み具合はオートセーブされています', fn: () => { closeModal(); toTitle(); } },
   ]);
 };
@@ -421,7 +446,11 @@ function contradict(ids) {
   const list = ch().contradictions || [];
   const hit = list.find(x => x.pairs.some(same));
   if (hit && S.f['contra_' + hit.id]) return act({ text: hit.doneText || 'その食い違いは、もう明らかにした。' });
-  if (hit && cond(hit.if)) return act({ text: hit.text, do: [...(hit.do || []), 'flag:contra_' + hit.id] });
+  if (hit && cond(hit.if)) {
+    // 崩した証言カードに印を付け、認めた内容を新しいカードにする
+    S.cards.forEach(c => { if (c.id && ids.includes(c.id) && hit.broken !== false && (hit.breaks || [ids[0], ids[1]]).includes(c.id)) c.broken = true; });
+    return act({ text: hit.text, do: [...(hit.do || []), 'flag:contra_' + hit.id], card: hit.card, cardId: hit.cardId }, { p: hit.p || null });
+  }
   if (hit) return act({ text: hit.notYet || 'いまは、それをつきつける相手がいない。' });
   act({ text: ch().contradictWrong || D.contradictWrong || 'その2つは、食い違っていないようだ…。', do: ['miss'] });
 }
@@ -454,9 +483,9 @@ function openNotebook(tab) {
 }
 const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
 function entryEl(e, onPin, isCard) {
-  const d = document.createElement('div'); d.className = 'nb-entry' + (e.pin ? ' pinned' : '');
+  const d = document.createElement('div'); d.className = 'nb-entry' + (e.pin ? ' pinned' : '') + (e.broken ? ' is-broken' : '');
   const who = speaker(e), where = placeName(e.c, e.l);
-  d.innerHTML = `<div class="meta">${esc(who || (isCard ? '調べたこと' : '（地の文）'))}${where ? '・' + esc(where) : ''}${D.chapters[e.c] && D.chapters[e.c].label ? '・' + esc(D.chapters[e.c].label) : ''}</div><div class="txt">${esc(e.t)}</div>`;
+  d.innerHTML = `<div class="meta">${e.broken ? '<span class="broken">崩した</span>' : ''}${esc(who || (isCard ? '調べたこと' : '（地の文）'))}${where ? '・' + esc(where) : ''}${D.chapters[e.c] && D.chapters[e.c].label ? '・' + esc(D.chapters[e.c].label) : ''}</div><div class="txt">${esc(e.t)}</div>`;
   d.prepend(pinBtn(e.pin, onPin));
   return d;
 }
@@ -557,6 +586,16 @@ function showRecap() {
   b.onclick = closeModal; m.firstChild.appendChild(b);
   document.body.appendChild(m);
 }
+
+// ---------- プレイ時間 ----------
+// 画面が見えていて、最後の操作から2分以内のあいだだけ数える（放置した時間は入れない）
+let lastInput = Date.now();
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { lastInput = Date.now(); }, true));
+setInterval(() => {
+  if (!S || S.done || document.visibilityState !== 'visible' || Date.now() - lastInput > 120000) return;
+  S.v.playSec = (S.v.playSec || 0) + 5;
+}, 5000);
+const hm = s => { s = s || 0; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}時間${m}分` : `${m}分`; };
 
 // ---------- 起動時の一括読み込み ----------
 // 背景をすべて先に読み込んでおき、遊んでいる間は通信しないようにする。

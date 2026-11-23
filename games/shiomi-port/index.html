@@ -119,6 +119,8 @@ header{display:flex;align-items:center;justify-content:space-between}
 .big:active,.pill:active,#modal .row:not([disabled]):active,.nb-tabs button:active,.nb-x:active{transform:scale(.96);filter:brightness(1.25)}
 .big.going{filter:brightness(1.25);pointer-events:none}
 body.leaving::after{content:'開いています…';position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#0e1117cc;color:var(--text);font-size:15px;letter-spacing:.1em;animation:fade .2s}
+.nb-entry .broken{display:inline-block;background:var(--accent2);color:#fff;border-radius:999px;font-size:10.5px;padding:0 8px;margin-right:6px}
+.nb-entry.is-broken .txt{color:var(--sub);text-decoration:line-through;text-decoration-color:#c2553f99}
 
 </style>
 </head>
@@ -133,7 +135,7 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
   <div id="msgbox"><div id="who"></div><div id="msg"></div></div>
   <div id="cmd"></div>
 </div>
-<script type="application/json" id="game-data">{"id":"shiomi-port","title":"汐見港殺人事件","hub":"../../index.html","start":"ch1","chapters":{"ch1":{"id":"ch1","label":"","title":"汐見港殺人事件","card":false,"start":{"loc":"study","text":"マコト「警部、おはようございます！ 現場はこちらです。さっそく捜査を始めましょう」"},"locations":{"study":{"name":"黒木邸・書斎","bg":"study","people":["makoto"],"objs":{"body":"遺体の跡","desk":"机","medicine":"薬瓶","safe":"金庫","window":"窓","whisky":"ウイスキー"},"arrive":"黒木邸の書斎にやってきた。"},"living":{"name":"黒木邸・居間","bg":"living","people":["makoto","saori","haru"],"objs":{"photoframe":"写真立て","phone":"電話"},"arrive":"居間には、娘の沙織と家政婦のハルがいる。"},"station":{"name":"汐見警察署","bg":"station","people":["makoto","oba"],"objs":{"board":"掲示板"},"arrive":"汐見警察署。鑑識の大場がいる。"},"company":{"name":"汐見水産","bg":"company","people":["makoto","nomura"],"objs":{"office":"社長室","docs":"書類"},"arrive":"汐見水産の本社。潮のにおいがする。秘書の野村が出迎えた。"},"mahjong":{"name":"雀荘「東風」","bg":"mahjong","unlock":"flag:know_tonpu","people":["makoto","master","takashi"],"objs":{"table":"雀卓"},"arrive":"たばこの煙が立ちこめる雀荘「東風」。奥の卓に被害者の弟・隆がいる。"},"hospital":{"name":"汐見病院・薬局","bg":"hospital","unlock":"flag:katagiri_med","people":["makoto","pharm"],"objs":{"shelf":"薬棚"},"arrive":"汐見病院の薬局にやってきた。"},"law":{"name":"片桐法律事務所","bg":"law","unlock":"flag:law_open","people":["makoto","katagiri"],"objs":{"shelf2":"本棚","desk2":"机"},"arrive":"片桐法律事務所。弁護士の片桐が、にこやかに迎えた。"}},"onMove":[{"if":"flag:sent","do":["inc:wait"]}],"talk":{"makoto":[{"if":"!has:capsule","text":"マコト「警部、まずはこの書斎をくまなく調べましょう。机の上の薬瓶なんか、気になりますね」"},{"if":"!flag:sent","text":"マコト「そのカプセル、署の大場さんに鑑定してもらいましょう！」"},{"if":"!has:ledger && (flag:know_safe || flag:hint_code)","text":"マコト「金庫の番号…ご家族にちなんだ数字かもしれません。居間に何かないですかね」"},{"if":"!has:ledger","text":"マコト「書斎の金庫が気になります。会社や家の人に話を聞いてみましょう」"},{"if":"!flag:katagiri_med","text":"マコト「あの薬、誰が用意したものなんでしょう？ 家政婦のハルさんに見せてみては？」"},{"if":"!flag:pharm","text":"マコト「薬をもらった病院で、カプセルを確かめてもらいましょう」"},{"if":"!has:report","text":"マコト「大場さんの鑑定、そろそろ結果が出てるんじゃないですか？」"},{"if":"!flag:motive","text":"マコト「帳簿の送金先がどこなのか…会社の人ならわかるかも」"},{"if":"!talked:katagiri>=3 && !flag:contra_lie","text":"マコト「片桐先生にも、直接話を聞いてみましょう。何度か聞けば、ぼろが出るかもしれません」"},{"if":"!flag:contra_lie","text":"マコト「片桐先生、薬には関わっていないと言っていましたよね。手帳の証言カードと食い違っていませんか？ 法律事務所で『矛盾をつく』を使いましょう」"},{"text":"マコト「動機、機会、手段。証拠はそろいました。『推理』で犯人を指名しましょう、警部！」"}],"haru":{"seq":[{"text":"ハル「今朝7時に書斎へお茶をお持ちしたら、鍵がかかっておりまして…。合鍵で開けたら、旦那さまが倒れておいででした」","card":"今朝7時、鍵のかかった書斎を合鍵で開けて社長を見つけた"},{"text":"ハル「旦那さまは毎晩10時に心臓のお薬を飲まれて、それから書斎にこもって鍵をおかけになるのがお決まりでした」","do":["flag:know_routine"],"card":"社長は毎晩10時に心臓の薬を飲み、書斎に鍵をかけてこもる"},{"text":"ハル「ゆうべは弟の隆さまがお金の無心に見えて…大声で言い争っておられました」","do":["flag:know_takashi"],"card":"ゆうべ、弟の隆が金の無心に来て言い争っていた"},{"text":"ハル「旦那さまは大事な番号を、いつもお嬢さまにちなんでお決めになっていましたねえ」","do":["flag:hint_code"],"card":"社長は大事な番号を、いつも娘の沙織にちなんで決めていた"}]},"saori":{"seq":[{"text":"沙織「父とは昨日、結婚のことで喧嘩しました。相手を認めてくれなくて…。でも、まさかこんな…」","card":"昨日、結婚のことで父と喧嘩した"},{"text":"沙織「叔父の隆？ 叔父ならたぶん、毎晩『東風（トンプー）』っていう雀荘にいます」","do":["flag:know_tonpu"],"card":"叔父の隆は毎晩、雀荘「東風」にいる"},{"text":"沙織「ゆうべ10時ごろは自分の部屋にいました。書斎から物音はしなかったと思います」"}]},"oba":[{"if":"has:report","text":"大場「毒は社長の胃からも出た。カプセルの中身と同じものだ。間違いない」"},{"if":"flag:sent && var:wait>=1","text":"大場「おう、出たぞ。あのカプセルの中身は薬じゃない、猛毒だ。外見だけ本物そっくりに作ってある」","do":["give:report"],"card":"カプセルの中身は猛毒。外見だけ本物そっくり"},{"if":"flag:sent","text":"大場「まだだ。ほかを回ってから、また来い」"},{"text":"大場「死因は毒物による中毒だ。ところがウイスキーとグラスからは何も出なかった。毒の入れ物がどこかにあるはずだぞ」","do":["flag:know_poison"],"card":"死因は毒。ウイスキーとグラスからは何も出なかった"}],"nomura":{"seq":[{"text":"野村「社長は最近、会社のお金の流れを熱心に調べておられました。内容は誰にも教えてくださらなかったのですが」","card":"社長は最近、会社の金の流れを調べていた"},{"text":"野村「調べた資料はご自宅の金庫にしまってある、とおっしゃっていました」","do":["flag:know_safe"],"card":"調べた資料は自宅の金庫にあると社長が言っていた"},{"text":"野村「会社の資金管理は、顧問弁護士の片桐先生にお任せしていました」","do":["flag:know_katagiri","flag:law_open"],"card":"会社の資金管理は顧問弁護士の片桐に任せていた"}]},"master":{"text":"店主「隆さん？ ゆうべは9時から朝の3時まで、ずっとここで打ってたよ。俺と客が証人だ」","do":["flag:alibi"],"card":"隆はゆうべ9時から朝3時まで雀荘にいた（アリバイ）"},"takashi":{"seq":[{"text":"隆「兄貴が死んだって？ …ふん、借金を断られたのは事実さ。だが、俺はやってねえ」","card":"借金を断られたのは事実。だが殺していない"},{"text":"隆「ゆうべは9時からずっとここだ。疑うならマスターに聞きな」"}]},"pharm":{"text":"薬剤師「黒木源三さんのお薬ですね。先週の11月16日、代理で片桐さんという方が受け取りに来られました」","do":["flag:pickup"],"card":"11月16日、片桐が代理で社長の薬を受け取った","cardId":"pharm_pickup"},"katagiri":{"seq":[{"text":"片桐「源三が…。古い友人として、残念でならないよ」"},{"text":"片桐「ゆうべ？ 9時には事務所を出て、自宅にいたよ。家内が証明してくれる」","card":"ゆうべは9時に事務所を出て自宅にいた"},{"text":"片桐「源三の薬？ さあ、私は何も関わっていないよ。そういうことは家の者に任せていたはずだ」","card":"源三の薬には何も関わっていない、と言った","cardId":"katagiri_lie"}]}},"show":{"haru":{"capsule":{"text":"ハル「そのお薬…先週、片桐先生がわざわざ病院からもらってきてくださったものです。旦那さまの古いご友人で、会社の顧問弁護士の先生ですよ」","do":["flag:know_katagiri","flag:katagiri_med"],"card":"その薬は先週、片桐が病院からもらってきたもの","cardId":"haru_med"},"memo":"ハル「K…でございますか。さあ、わたくしには…」"},"saori":{"ledger":"沙織「父が調べていたのは、これ…？」","memo":"沙織「K…。叔父も黒木だからKですけど…」"},"oba":{"capsule":[{"if":"flag:sent","text":"大場「それはもう預かって鑑定中だ」"},{"text":"大場「ほう…色がほんのわずかに違うな。よし、鑑定に回そう。少し時間をくれ」","do":["flag:sent","set:wait=0"]}]},"nomura":{"ledger":{"text":"野村「この送金先…片桐先生の個人口座です！ 3年で3000万円以上…。社長はこれに気づいて…」","do":["flag:motive","flag:know_katagiri","flag:law_open","toast:動機が見えてきた"],"card":"帳簿の送金先は片桐の個人口座。3年で3000万円以上"},"memo":{"text":"野村「金曜…社長は金曜日に片桐先生とお会いになる予定でした」","card":"社長は金曜に片桐と会う予定だった"}},"takashi":{"memo":{"text":"隆「K？ 俺じゃねえよ。兄貴は『金曜に片桐と話をつける』ってこぼしてたぜ」","do":["flag:know_katagiri"],"card":"兄は「金曜に片桐と話をつける」と言っていた"}},"pharm":{"capsule":{"text":"薬剤師「これは…うちでお出ししたカプセルではありません。本物には小さな刻印があるんです。誰かが似たものとすり替えたんですよ」","do":["flag:pickup","flag:pharm","toast:すり替えの証言を得た"],"card":"このカプセルは偽物。本物には刻印がある"}},"katagiri":{"ledger":"片桐「…これは何かの間違いだ。正式な手続きを経た送金だよ」\n\n（片桐の額に汗がにじんでいる）","capsule":"片桐「そんなカプセル、見たこともないね」","report":"片桐「毒…？ 私には関係のない話だ」"},"makoto":{"capsule":"マコト「一つだけ色が違うなんて、あやしいですね」","memo":"マコト「K…イニシャルがKの人物を探しましょう」","ledger":"マコト「送金先がどこなのか、会社の人に聞いてみては？」","report":"マコト「やっぱり毒はカプセルに！」"}},"look":{"body":{"text":"遺体はすでに運び出され、床にチョークの跡が残っている。社長は胸をおさえるように倒れていたらしい。死亡推定時刻は、ゆうべ10時ごろ。","card":"遺体の跡：胸をおさえて倒れていた。死亡推定はゆうべ10時ごろ"},"desk":[{"if":"has:memo","text":"書類が整然と並んでいる。"},{"text":"机の上にメモがある。\n『金曜 Kと話をつける』\nKとは誰だ…？","do":["give:memo"],"card":"机のメモ：「金曜 Kと話をつける」"}],"medicine":[{"if":"has:capsule","text":"残りのカプセルは、ふつうに見える。"},{"text":"心臓の薬の瓶だ。中のカプセルをひとつずつ見ていくと…\n一つだけ、ほんのわずかに色の違うものがある！","do":["give:capsule"]}],"safe":[{"if":"has:ledger","text":"金庫はもう空だ。"},{"do":["puzzle:safe"]}],"window":{"text":"窓には内側から鍵がかかっている。ドアにも鍵がかかっていた。\n…密室だ。","card":"書斎の窓とドアには内側から鍵。密室だった"},"whisky":"飲みかけのウイスキーとグラス。においをかいでも、変わったところはない。","photoframe":{"text":"幼いころの沙織さんの写真だ。裏に何か書いてある…\n『沙織 誕生 7月14日』","do":["flag:photo"],"card":"写真立ての裏：「沙織 誕生 7月14日」"},"phone":"古い黒電話だ。","board":"指名手配のポスターが貼ってある。この事件とは関係なさそうだ。","office":{"text":"社長の手帳が残っている。今週の金曜日の欄に『片桐』と書いてある。","do":["flag:know_katagiri","flag:law_open"],"card":"社長の手帳：今週金曜の欄に「片桐」"},"docs":"決算書類の山だ。素人にはさっぱりわからない。","table":"ジャラジャラと牌の音がする。いまは事件に集中しよう。","shelf":"薬がずらりと並んでいる。","shelf2":"分厚い法律書がぎっしり並んでいる。","desk2":"高級な調度品ばかりだ。個人の事務所にしては、ずいぶん羽振りがいい。"},"puzzles":{"safe":{"length":4,"answer":"0714","label":"4ケタの番号を入れよう","prompt":"ダイヤル式の金庫だ。4ケタの番号が必要らしい。","display":"金庫の番号：{code}","success":{"text":"カチリ…金庫が開いた！\n中に帳簿のコピーがある。ある口座への送金が、何度も記されている。","do":["give:ledger"]},"fail":"金庫の番号：{code}\n…開かない。ちがうようだ。","cancel":"金庫から離れた。"}},"accuse":{"prompt":"犯人はだれだ？","suspects":["saori","haru","nomura","takashi","katagiri","makoto"],"culprit":"katagiri","required":[{"if":"flag:motive","label":"動機（帳簿の送金先）"},{"if":"flag:contra_lie","label":"片桐のうそ（薬に関わっていないと言った）"},{"if":"flag:pharm","label":"機会（カプセルのすり替え）"},{"if":"has:report","label":"手段（毒の鑑定）"}],"missingText":"マコト「警部、{name}さんが犯人だと言い切れるだけの証拠は、まだそろっていません。もう少し調べましょう」","ending":"main","wrong":{"makoto":{"text":"マコト「け、警部！ ぼくじゃないですよぉ！」","do":["miss"]},"takashi":[{"if":"flag:alibi","text":"マコト「隆さんは雀荘で一晩じゅう打っていた。アリバイは完璧ですよ」","do":["miss"]},{"text":"マコト「警部、隆さんが犯人だと言い切れるだけの証拠は、まだそろっていません。もう少し調べましょう」"}],"saori":{"text":"マコト「沙織さんにお父さんを殺す手段があったとは思えません」","do":["miss"]},"haru":{"text":"マコト「ハルさんは第一発見者ですけど、動機が見当たりませんよ」","do":["miss"]},"nomura":{"text":"マコト「野村さんは社長の調査を手伝っていたくらいです。動機がありません」","do":["miss"]}}},"contradictions":[{"id":"lie","pairs":[["katagiri_lie","haru_med"],["katagiri_lie","pharm_pickup"]],"if":"here:law","text":"きみは片桐に、2つの証言をつきつけた。\n\n片桐「…ああ、そうだった。頼まれて一度、受け取りに行ったよ。それだけのことだ」\n\n（片桐の目が泳いでいる）","do":["toast:片桐のうそを崩した"],"notYet":"マコト「警部、その食い違いは片桐先生本人に突きつけましょう。法律事務所へ行きましょう」","doneText":"マコト「片桐先生のうそは、もう崩しましたよ」"}],"contradictWrong":"マコト「うーん…その2つは、食い違っていないような気がします」"}},"titleScreen":{"eyebrow":"MYSTERY ADVENTURE","title":"汐見港<br>殺人事件","lead":"港町・汐見で、水産会社の社長が<br>鍵のかかった書斎で死んでいた。"},"prologue":{"eyebrow":"PROLOGUE","title":"あらすじ","paragraphs":["11月のある朝、港町・汐見（しおみ）。地元の名士、汐見水産の社長・<b>黒木源三<\/b>が、自宅の書斎で死んでいるのが見つかった。","見つけたのは家政婦。書斎のドアにも窓にも、内側から鍵がかかっていた。机にはウイスキーのグラスがあるだけで、争ったあとはない。","自殺か、それとも密室殺人か――。きみは汐見署の<b>警部<\/b>として、新人刑事の<b>マコト<\/b>と捜査を始める。"],"cast":[["黒木 沙織","被害者の娘。昨日、結婚のことで父と喧嘩した"],["田辺 ハル","黒木家の家政婦。第一発見者"],["黒木 隆","被害者の弟。借金を抱えている"],["野村","汐見水産の社長秘書"],["片桐","顧問弁護士。被害者の古い友人"],["大場","汐見署の鑑識"]],"button":"捜査開始"},"resumeText":"捜査を再開した。","items":{"capsule":"カプセル","memo":"机のメモ","ledger":"帳簿のコピー","report":"鑑定書"},"people":{"makoto":{"name":"マコト"},"saori":{"name":"沙織"},"haru":{"name":"ハル"},"oba":{"name":"鑑識の大場","short":"大場"},"nomura":{"name":"秘書の野村","short":"野村"},"master":{"name":"雀荘の店主","short":"店主"},"takashi":{"name":"隆"},"pharm":{"name":"薬剤師"},"katagiri":{"name":"片桐"}},"assistant":"makoto","assistantHint":"マコト「警部、{name}さんはまだ何か知っていそうですよ。もう少し話を聞いてみましょう」","endings":{"main":{"bg":"law","place":"片桐法律事務所","small":"解決編","pages":["きみは片桐に、帳簿のコピー、薬剤師の証言、そして鑑定書をつきつけた。","片桐「……」","片桐「源三は、私の横領に気づいた。金曜にすべてを公にすると言ってきたよ」","片桐「先週、薬を受け取ったとき、一錠だけすり替えておいた。いつ飲むかはわからない。だが毎晩一錠ずつ飲むあいつは、いつか必ずそれを飲む」","片桐「鍵をかけた書斎で、ひとりで。…私はその夜、家にいるだけでよかったんだ」","マコト「密室なんかじゃなかった。社長は自分で鍵をかけて、自分で毒を飲まされたんですね…」","こうして、汐見港殺人事件は幕を閉じた。"],"finalBg":"ending","finalPlace":"事件解決","finalSmall":"EPILOGUE","ranks":[{"if":"var:miss==0 && var:turns<70","label":"名警部"},{"if":"var:miss<=2","label":"敏腕刑事"},{"label":"がんばった刑事"}],"result":"～ 完 ～\n\n行動回数：{turns}\nまちがった指名：{miss}回\n評価：{rank}\n\n遊んでくれてありがとう！"}},"assets":{"bg":{"company":"bg/company.webp","ending":"bg/ending.webp","hospital":"bg/hospital.webp","law":"bg/law.webp","living":"bg/living.webp","mahjong":"bg/mahjong.webp","station":"bg/station.webp","study":"bg/study.webp"}}}</script>
+<script type="application/json" id="game-data">{"id":"shiomi-port","title":"汐見港殺人事件","hub":"../../index.html","start":"ch1","chapters":{"ch1":{"id":"ch1","label":"","title":"汐見港殺人事件","card":false,"start":{"loc":"study","text":"マコト「警部、おはようございます！ 現場はこちらです。さっそく捜査を始めましょう」"},"locations":{"study":{"name":"黒木邸・書斎","bg":"study","people":["makoto"],"objs":{"body":"遺体の跡","desk":"机","medicine":"薬瓶","safe":"金庫","window":"窓","whisky":"ウイスキー"},"arrive":"黒木邸の書斎にやってきた。"},"living":{"name":"黒木邸・居間","bg":"living","people":["makoto","saori","haru"],"objs":{"photoframe":"写真立て","phone":"電話"},"arrive":"居間には、娘の沙織と家政婦のハルがいる。"},"station":{"name":"汐見警察署","bg":"station","people":["makoto","oba"],"objs":{"board":"掲示板"},"arrive":"汐見警察署。鑑識の大場がいる。"},"company":{"name":"汐見水産","bg":"company","people":["makoto","nomura"],"objs":{"office":"社長室","docs":"書類"},"arrive":"汐見水産の本社。潮のにおいがする。秘書の野村が出迎えた。"},"mahjong":{"name":"雀荘「東風」","bg":"mahjong","unlock":"flag:know_tonpu","people":["makoto","master","takashi"],"objs":{"table":"雀卓"},"arrive":"たばこの煙が立ちこめる雀荘「東風」。奥の卓に被害者の弟・隆がいる。"},"hospital":{"name":"汐見病院・薬局","bg":"hospital","unlock":"flag:katagiri_med","people":["makoto","pharm"],"objs":{"shelf":"薬棚"},"arrive":"汐見病院の薬局にやってきた。"},"law":{"name":"片桐法律事務所","bg":"law","unlock":"flag:law_open","people":["makoto","katagiri"],"objs":{"shelf2":"本棚","desk2":"机"},"arrive":"片桐法律事務所。弁護士の片桐が、にこやかに迎えた。"}},"onMove":[{"if":"flag:sent","do":["inc:wait"]}],"talk":{"makoto":[{"if":"!has:capsule","text":"マコト「警部、まずはこの書斎をくまなく調べましょう。机の上の薬瓶なんか、気になりますね」"},{"if":"!flag:sent","text":"マコト「そのカプセル、署の大場さんに鑑定してもらいましょう！」"},{"if":"!has:ledger && (flag:know_safe || flag:hint_code)","text":"マコト「金庫の番号…ご家族にちなんだ数字かもしれません。居間に何かないですかね」"},{"if":"!has:ledger","text":"マコト「書斎の金庫が気になります。会社や家の人に話を聞いてみましょう」"},{"if":"!flag:katagiri_med","text":"マコト「あの薬、誰が用意したものなんでしょう？ 家政婦のハルさんに見せてみては？」"},{"if":"!flag:pharm","text":"マコト「薬をもらった病院で、カプセルを確かめてもらいましょう」"},{"if":"!has:report","text":"マコト「大場さんの鑑定、そろそろ結果が出てるんじゃないですか？」"},{"if":"!flag:motive","text":"マコト「帳簿の送金先がどこなのか…会社の人ならわかるかも」"},{"if":"!talked:katagiri>=3 && !flag:contra_lie","text":"マコト「片桐先生にも、直接話を聞いてみましょう。何度か聞けば、ぼろが出るかもしれません」"},{"if":"!flag:contra_lie","text":"マコト「片桐先生、薬には関わっていないと言っていましたよね。手帳の証言カードと食い違っていませんか？ 法律事務所で『矛盾をつく』を使いましょう」"},{"text":"マコト「動機、機会、手段。証拠はそろいました。『推理』で犯人を指名しましょう、警部！」"}],"haru":{"seq":[{"text":"ハル「今朝7時に書斎へお茶をお持ちしたら、鍵がかかっておりまして…。合鍵で開けたら、旦那さまが倒れておいででした」","card":"今朝7時、鍵のかかった書斎を合鍵で開けて社長を見つけた"},{"text":"ハル「旦那さまは毎晩10時に心臓のお薬を飲まれて、それから書斎にこもって鍵をおかけになるのがお決まりでした」","do":["flag:know_routine"],"card":"社長は毎晩10時に心臓の薬を飲み、書斎に鍵をかけてこもる"},{"text":"ハル「ゆうべは弟の隆さまがお金の無心に見えて…大声で言い争っておられました」","do":["flag:know_takashi"],"card":"ゆうべ、弟の隆が金の無心に来て言い争っていた"},{"text":"ハル「旦那さまは大事な番号を、いつもお嬢さまにちなんでお決めになっていましたねえ」","do":["flag:hint_code"],"card":"社長は大事な番号を、いつも娘の沙織にちなんで決めていた"}]},"saori":{"seq":[{"text":"沙織「父とは昨日、結婚のことで喧嘩しました。相手を認めてくれなくて…。でも、まさかこんな…」","card":"昨日、結婚のことで父と喧嘩した"},{"text":"沙織「叔父の隆？ 叔父ならたぶん、毎晩『東風（トンプー）』っていう雀荘にいます」","do":["flag:know_tonpu"],"card":"叔父の隆は毎晩、雀荘「東風」にいる"},{"text":"沙織「ゆうべ10時ごろは自分の部屋にいました。書斎から物音はしなかったと思います」"}]},"oba":[{"if":"has:report","text":"大場「毒は社長の胃からも出た。カプセルの中身と同じものだ。間違いない」"},{"if":"flag:sent && var:wait>=1","text":"大場「おう、出たぞ。あのカプセルの中身は薬じゃない、猛毒だ。外見だけ本物そっくりに作ってある」","do":["give:report"],"card":"カプセルの中身は猛毒。外見だけ本物そっくり"},{"if":"flag:sent","text":"大場「まだだ。ほかを回ってから、また来い」"},{"text":"大場「死因は毒物による中毒だ。ところがウイスキーとグラスからは何も出なかった。毒の入れ物がどこかにあるはずだぞ」","do":["flag:know_poison"],"card":"死因は毒。ウイスキーとグラスからは何も出なかった"}],"nomura":{"seq":[{"text":"野村「社長は最近、会社のお金の流れを熱心に調べておられました。内容は誰にも教えてくださらなかったのですが」","card":"社長は最近、会社の金の流れを調べていた"},{"text":"野村「調べた資料はご自宅の金庫にしまってある、とおっしゃっていました」","do":["flag:know_safe"],"card":"調べた資料は自宅の金庫にあると社長が言っていた"},{"text":"野村「会社の資金管理は、顧問弁護士の片桐先生にお任せしていました」","do":["flag:know_katagiri","flag:law_open"],"card":"会社の資金管理は顧問弁護士の片桐に任せていた"}]},"master":{"text":"店主「隆さん？ ゆうべは9時から朝の3時まで、ずっとここで打ってたよ。俺と客が証人だ」","do":["flag:alibi"],"card":"隆はゆうべ9時から朝3時まで雀荘にいた（アリバイ）"},"takashi":{"seq":[{"text":"隆「兄貴が死んだって？ …ふん、借金を断られたのは事実さ。だが、俺はやってねえ」","card":"借金を断られたのは事実。だが殺していない"},{"text":"隆「ゆうべは9時からずっとここだ。疑うならマスターに聞きな」"}]},"pharm":{"text":"薬剤師「黒木源三さんのお薬ですね。先週の11月16日、代理で片桐さんという方が受け取りに来られました」","do":["flag:pickup"],"card":"11月16日、片桐が代理で社長の薬を受け取った","cardId":"pharm_pickup"},"katagiri":{"seq":[{"text":"片桐「源三が…。古い友人として、残念でならないよ」"},{"text":"片桐「ゆうべ？ 9時には事務所を出て、自宅にいたよ。家内が証明してくれる」","card":"ゆうべは9時に事務所を出て自宅にいた"},{"text":"片桐「源三の薬？ さあ、私は何も関わっていないよ。そういうことは家の者に任せていたはずだ」","card":"源三の薬には何も関わっていない、と言った","cardId":"katagiri_lie"}]}},"show":{"haru":{"capsule":{"text":"ハル「そのお薬…先週、片桐先生がわざわざ病院からもらってきてくださったものです。旦那さまの古いご友人で、会社の顧問弁護士の先生ですよ」","do":["flag:know_katagiri","flag:katagiri_med"],"card":"その薬は先週、片桐が病院からもらってきたもの","cardId":"haru_med"},"memo":"ハル「K…でございますか。さあ、わたくしには…」"},"saori":{"ledger":"沙織「父が調べていたのは、これ…？」","memo":"沙織「K…。叔父も黒木だからKですけど…」"},"oba":{"capsule":[{"if":"flag:sent","text":"大場「それはもう預かって鑑定中だ」"},{"text":"大場「ほう…色がほんのわずかに違うな。よし、鑑定に回そう。少し時間をくれ」","do":["flag:sent","set:wait=0"]}]},"nomura":{"ledger":{"text":"野村「この送金先…片桐先生の個人口座です！ 3年で3000万円以上…。社長はこれに気づいて…」","do":["flag:motive","flag:know_katagiri","flag:law_open","toast:動機が見えてきた"],"card":"帳簿の送金先は片桐の個人口座。3年で3000万円以上"},"memo":{"text":"野村「金曜…社長は金曜日に片桐先生とお会いになる予定でした」","card":"社長は金曜に片桐と会う予定だった"}},"takashi":{"memo":{"text":"隆「K？ 俺じゃねえよ。兄貴は『金曜に片桐と話をつける』ってこぼしてたぜ」","do":["flag:know_katagiri"],"card":"兄は「金曜に片桐と話をつける」と言っていた"}},"pharm":{"capsule":{"text":"薬剤師「これは…うちでお出ししたカプセルではありません。本物には小さな刻印があるんです。誰かが似たものとすり替えたんですよ」","do":["flag:pickup","flag:pharm","toast:すり替えの証言を得た"],"card":"このカプセルは偽物。本物には刻印がある"}},"katagiri":{"ledger":"片桐「…これは何かの間違いだ。正式な手続きを経た送金だよ」\n\n（片桐の額に汗がにじんでいる）","capsule":"片桐「そんなカプセル、見たこともないね」","report":"片桐「毒…？ 私には関係のない話だ」"},"makoto":{"capsule":"マコト「一つだけ色が違うなんて、あやしいですね」","memo":"マコト「K…イニシャルがKの人物を探しましょう」","ledger":"マコト「送金先がどこなのか、会社の人に聞いてみては？」","report":"マコト「やっぱり毒はカプセルに！」"}},"look":{"body":{"text":"遺体はすでに運び出され、床にチョークの跡が残っている。社長は胸をおさえるように倒れていたらしい。死亡推定時刻は、ゆうべ10時ごろ。","card":"遺体の跡：胸をおさえて倒れていた。死亡推定はゆうべ10時ごろ"},"desk":[{"if":"has:memo","text":"書類が整然と並んでいる。"},{"text":"机の上にメモがある。\n『金曜 Kと話をつける』\nKとは誰だ…？","do":["give:memo"],"card":"机のメモ：「金曜 Kと話をつける」"}],"medicine":[{"if":"has:capsule","text":"残りのカプセルは、ふつうに見える。"},{"text":"心臓の薬の瓶だ。中のカプセルをひとつずつ見ていくと…\n一つだけ、ほんのわずかに色の違うものがある！","do":["give:capsule"]}],"safe":[{"if":"has:ledger","text":"金庫はもう空だ。"},{"do":["puzzle:safe"]}],"window":{"text":"窓には内側から鍵がかかっている。ドアにも鍵がかかっていた。\n…密室だ。","card":"書斎の窓とドアには内側から鍵。密室だった"},"whisky":"飲みかけのウイスキーとグラス。においをかいでも、変わったところはない。","photoframe":{"text":"幼いころの沙織さんの写真だ。裏に何か書いてある…\n『沙織 誕生 7月14日』","do":["flag:photo"],"card":"写真立ての裏：「沙織 誕生 7月14日」"},"phone":"古い黒電話だ。","board":"指名手配のポスターが貼ってある。この事件とは関係なさそうだ。","office":{"text":"社長の手帳が残っている。今週の金曜日の欄に『片桐』と書いてある。","do":["flag:know_katagiri","flag:law_open"],"card":"社長の手帳：今週金曜の欄に「片桐」"},"docs":"決算書類の山だ。素人にはさっぱりわからない。","table":"ジャラジャラと牌の音がする。いまは事件に集中しよう。","shelf":"薬がずらりと並んでいる。","shelf2":"分厚い法律書がぎっしり並んでいる。","desk2":"高級な調度品ばかりだ。個人の事務所にしては、ずいぶん羽振りがいい。"},"puzzles":{"safe":{"length":4,"answer":"0714","label":"4ケタの番号を入れよう","prompt":"ダイヤル式の金庫だ。4ケタの番号が必要らしい。","display":"金庫の番号：{code}","success":{"text":"カチリ…金庫が開いた！\n中に帳簿のコピーがある。ある口座への送金が、何度も記されている。","do":["give:ledger"]},"fail":"金庫の番号：{code}\n…開かない。ちがうようだ。","cancel":"金庫から離れた。"}},"accuse":{"prompt":"犯人はだれだ？","suspects":["saori","haru","nomura","takashi","katagiri","makoto"],"culprit":"katagiri","required":[{"if":"flag:motive","label":"動機（帳簿の送金先）"},{"if":"flag:contra_lie","label":"片桐のうそ（薬に関わっていないと言った）"},{"if":"flag:pharm","label":"機会（カプセルのすり替え）"},{"if":"has:report","label":"手段（毒の鑑定）"}],"missingText":"マコト「警部、{name}さんが犯人だと言い切れるだけの証拠は、まだそろっていません。もう少し調べましょう」","ending":"main","wrong":{"makoto":{"text":"マコト「け、警部！ ぼくじゃないですよぉ！」","do":["miss"]},"takashi":[{"if":"flag:alibi","text":"マコト「隆さんは雀荘で一晩じゅう打っていた。アリバイは完璧ですよ」","do":["miss"]},{"text":"マコト「警部、隆さんが犯人だと言い切れるだけの証拠は、まだそろっていません。もう少し調べましょう」"}],"saori":{"text":"マコト「沙織さんにお父さんを殺す手段があったとは思えません」","do":["miss"]},"haru":{"text":"マコト「ハルさんは第一発見者ですけど、動機が見当たりませんよ」","do":["miss"]},"nomura":{"text":"マコト「野村さんは社長の調査を手伝っていたくらいです。動機がありません」","do":["miss"]}}},"contradictions":[{"id":"lie","pairs":[["katagiri_lie","haru_med"],["katagiri_lie","pharm_pickup"]],"if":"here:law","text":"きみは片桐に、2つの証言をつきつけた。\n\n片桐「…ああ、そうだった。頼まれて一度、受け取りに行ったよ。それだけのことだ」\n\n（片桐の目が泳いでいる）\n\nマコト「警部、これで片桐先生は、薬に手を触れられたことになります。あとは、動機と毒の証拠がそろえば…！」","do":["toast:片桐のうそを崩した"],"notYet":"マコト「警部、その食い違いは片桐先生本人に突きつけましょう。法律事務所へ行きましょう」","doneText":"マコト「片桐先生のうそは、もう崩しましたよ」","card":"頼まれて一度、社長の薬を受け取りに行ったと認めた","cardId":"katagiri_admit","p":"katagiri","breaks":["katagiri_lie"]}],"contradictWrong":"マコト「うーん…その2つは、食い違っていないような気がします」"}},"titleScreen":{"eyebrow":"MYSTERY ADVENTURE","title":"汐見港<br>殺人事件","lead":"港町・汐見で、水産会社の社長が<br>鍵のかかった書斎で死んでいた。"},"prologue":{"eyebrow":"PROLOGUE","title":"あらすじ","paragraphs":["11月のある朝、港町・汐見（しおみ）。地元の名士、汐見水産の社長・<b>黒木源三<\/b>が、自宅の書斎で死んでいるのが見つかった。","見つけたのは家政婦。書斎のドアにも窓にも、内側から鍵がかかっていた。机にはウイスキーのグラスがあるだけで、争ったあとはない。","自殺か、それとも密室殺人か――。きみは汐見署の<b>警部<\/b>として、新人刑事の<b>マコト<\/b>と捜査を始める。"],"cast":[["黒木 沙織","被害者の娘。昨日、結婚のことで父と喧嘩した"],["田辺 ハル","黒木家の家政婦。第一発見者"],["黒木 隆","被害者の弟。借金を抱えている"],["野村","汐見水産の社長秘書"],["片桐","顧問弁護士。被害者の古い友人"],["大場","汐見署の鑑識"]],"button":"捜査開始"},"resumeText":"捜査を再開した。","items":{"capsule":"カプセル","memo":"机のメモ","ledger":"帳簿のコピー","report":"鑑定書"},"people":{"makoto":{"name":"マコト"},"saori":{"name":"沙織"},"haru":{"name":"ハル"},"oba":{"name":"鑑識の大場","short":"大場"},"nomura":{"name":"秘書の野村","short":"野村"},"master":{"name":"雀荘の店主","short":"店主"},"takashi":{"name":"隆"},"pharm":{"name":"薬剤師"},"katagiri":{"name":"片桐"}},"assistant":"makoto","assistantHint":"マコト「警部、{name}さんはまだ何か知っていそうですよ。もう少し話を聞いてみましょう」","endings":{"main":{"bg":"law","place":"片桐法律事務所","small":"解決編","pages":["きみは片桐に、帳簿のコピー、薬剤師の証言、そして鑑定書をつきつけた。","片桐「……」","片桐「源三は、私の横領に気づいた。金曜にすべてを公にすると言ってきたよ」","片桐「先週、薬を受け取ったとき、一錠だけすり替えておいた。いつ飲むかはわからない。だが毎晩一錠ずつ飲むあいつは、いつか必ずそれを飲む」","片桐「鍵をかけた書斎で、ひとりで。…私はその夜、家にいるだけでよかったんだ」","マコト「密室なんかじゃなかった。社長は自分で鍵をかけて、自分で毒を飲まされたんですね…」","こうして、汐見港殺人事件は幕を閉じた。"],"finalBg":"ending","finalPlace":"事件解決","finalSmall":"EPILOGUE","ranks":[{"if":"var:miss==0 && var:turns<70","label":"名警部"},{"if":"var:miss<=2","label":"敏腕刑事"},{"label":"がんばった刑事"}],"result":"～ 完 ～\n\n行動回数：{turns}\nまちがった指名：{miss}回\n評価：{rank}\n\n遊んでくれてありがとう！"}},"assets":{"bg":{"company":"bg/company.webp","ending":"bg/ending.webp","hospital":"bg/hospital.webp","law":"bg/law.webp","living":"bg/living.webp","mahjong":"bg/mahjong.webp","station":"bg/station.webp","study":"bg/study.webp"}}}</script>
 <script>
 // mystery-games 共通エンジン
 // シナリオは <script id="game-data"> の JSON から読む（tools/build.py が埋め込む）。
@@ -163,6 +165,8 @@ let pending = {};
 const fresh = () => ({ chapter: D.start, loc: null, f: {}, v: { turns: 0, miss: 0 }, items: [], seq: {}, done: false, log: [], cards: [], memo: '', seenCards: 0 });
 const ch = () => D.chapters[S.chapter];
 const loc = () => ch().locations[S.loc];
+// 場所にいる人。{"id": "...", "if": "条件"} で、場面によって出入りさせられる
+const here = (L = loc()) => (L.people || []).filter(p => typeof p === 'string' || cond(p.if)).map(p => typeof p === 'string' ? p : p.id);
 const person = p => D.people[p] || { name: p };
 const short = p => person(p).short || person(p).name;
 const fmt = (t, o) => String(t).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] : m));
@@ -231,6 +235,8 @@ function run(list) {
       case 'puzzle': pending.puzzle = a; break;
       case 'ending': pending.ending = a; break;
       case 'chapter': pending.chapter = a; break;
+      case 'event': pending.event = a; break;
+      case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
     }
   }
@@ -271,7 +277,7 @@ function renderScene() {
   const L = loc();
   updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
-  $('here').innerHTML = (L.people || []).map(p => `<span>${person(p).name}</span>`).join('');
+  $('here').innerHTML = here(L).map(p => `<span>${person(p).name}</span>`).join('');
 }
 
 const IC = {
@@ -330,7 +336,13 @@ function after() {
     openBefore = null;
   }
   if (p.goto) { S.loc = p.goto; renderScene(); }
+  // 自動の進行：条件がそろったトリガーを1つだけ動かす（トリガーには once 用のフラグを do に入れておく）
+  if (!p.event && !p.ending && !p.chapter && !p.puzzle) {
+    const t = (ch().triggers || []).find(r => cond(r.if));
+    if (t) { pending = {}; run(t.do); Object.assign(p, pending); pending = {}; }
+  }
   autosave();
+  if (p.event) return playEvent(p.event);
   if (p.puzzle) return openPuzzle(p.puzzle);
   if (p.ending) return nextBtn(() => ending(p.ending));
   if (p.chapter) return nextBtn(() => startChapter(p.chapter));
@@ -363,11 +375,11 @@ function hasNewTalk(p, heard) {
   return !!(r && r.text && r.card && !heard.has(r.text));
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
-function askMenu() { btns([...(loc().people || []).map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
+function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
 function assistantHint() {
   const heard = heardSet();
-  const q = (loc().people || []).find(p => p !== D.assistant && hasNewTalk(p, heard));
+  const q = here().find(p => p !== D.assistant && hasNewTalk(p, heard));
   return q ? { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) } : null;
 }
 function talk(p) {
@@ -386,7 +398,7 @@ function look(o) {
 function showMenu() {
   if (!S.items.length) { say('見せるものを何も持っていない。'); return; }
   btns([...S.items.map(i => [D.items[i], () => {
-    btns([...(loc().people || []).map(p => [person(p).name, () => {
+    btns([...here().map(p => [person(p).name, () => {
       const r = resolve(((ch().show || {})[p] || {})[i], 'show:' + p + ':' + i);
       act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) }, { p });
     }]), ['もどる', showMenu, 'back']], D.items[i] + 'をだれに見せる？');
@@ -408,6 +420,20 @@ function accuse(p) {
     return ending(A.ending);
   }
   act(resolve((A.wrong || {})[p], 'accuse:' + p) || { text: A.wrongDefault || 'ちがうようだ。', do: ['miss'] });
+}
+
+// ---------- イベント（何ページか続けて見せる場面） ----------
+// 章の events: {id: {bg, place, pages: [文...], do: [最後に行う効果]}}
+function playEvent(id) {
+  const E = ch().events[id];
+  if (E.bg || E.place) setScene(E.bg || loc().bg, E.place || loc().name, ch().label || '現在地');
+  let k = 0;
+  const next = () => {
+    if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
+    pending = {}; openBefore = openLocs(); run(E.do);
+    renderScene(); after();
+  };
+  next();
 }
 
 // ---------- 謎解き（番号入力） ----------
@@ -441,7 +467,7 @@ function startChapter(id) {
 // ---------- エンディング ----------
 function ending(id) {
   const E = D.endings[id];
-  S.done = true; markCleared(); autosave();
+  S.done = true; if (E.clear !== false) markCleared(); autosave();
   setScene(E.bg, E.place, E.small);
   $('here').innerHTML = '';
   let k = 0;
@@ -449,7 +475,7 @@ function ending(id) {
     if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
     setScene(E.finalBg || E.bg, E.finalPlace || '', E.finalSmall || '');
     const rank = ((E.ranks || []).find(r => cond(r.if)) || {}).label || '';
-    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank }));
+    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec) }));
     btns([['タイトルへ', toTitle, 'primary']], null, 'one');
   };
   next();
@@ -497,6 +523,7 @@ $('menu').onclick = () => {
   modal('メニュー', [
     { t: 'セーブ', s: '今の状態をスロットに保存', off: S.done, fn: saveMenu },
     { t: 'ロード', s: 'オートセーブ・章のはじめ・スロットから', fn: () => modal('ロード', loadList()) },
+    { t: 'プレイ時間', s: hm(S.v.playSec) + '（操作のない時間は数えません）', off: true },
     { t: 'タイトルへ', s: '進み具合はオートセーブされています', fn: () => { closeModal(); toTitle(); } },
   ]);
 };
@@ -558,7 +585,11 @@ function contradict(ids) {
   const list = ch().contradictions || [];
   const hit = list.find(x => x.pairs.some(same));
   if (hit && S.f['contra_' + hit.id]) return act({ text: hit.doneText || 'その食い違いは、もう明らかにした。' });
-  if (hit && cond(hit.if)) return act({ text: hit.text, do: [...(hit.do || []), 'flag:contra_' + hit.id] });
+  if (hit && cond(hit.if)) {
+    // 崩した証言カードに印を付け、認めた内容を新しいカードにする
+    S.cards.forEach(c => { if (c.id && ids.includes(c.id) && hit.broken !== false && (hit.breaks || [ids[0], ids[1]]).includes(c.id)) c.broken = true; });
+    return act({ text: hit.text, do: [...(hit.do || []), 'flag:contra_' + hit.id], card: hit.card, cardId: hit.cardId }, { p: hit.p || null });
+  }
   if (hit) return act({ text: hit.notYet || 'いまは、それをつきつける相手がいない。' });
   act({ text: ch().contradictWrong || D.contradictWrong || 'その2つは、食い違っていないようだ…。', do: ['miss'] });
 }
@@ -591,9 +622,9 @@ function openNotebook(tab) {
 }
 const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
 function entryEl(e, onPin, isCard) {
-  const d = document.createElement('div'); d.className = 'nb-entry' + (e.pin ? ' pinned' : '');
+  const d = document.createElement('div'); d.className = 'nb-entry' + (e.pin ? ' pinned' : '') + (e.broken ? ' is-broken' : '');
   const who = speaker(e), where = placeName(e.c, e.l);
-  d.innerHTML = `<div class="meta">${esc(who || (isCard ? '調べたこと' : '（地の文）'))}${where ? '・' + esc(where) : ''}${D.chapters[e.c] && D.chapters[e.c].label ? '・' + esc(D.chapters[e.c].label) : ''}</div><div class="txt">${esc(e.t)}</div>`;
+  d.innerHTML = `<div class="meta">${e.broken ? '<span class="broken">崩した</span>' : ''}${esc(who || (isCard ? '調べたこと' : '（地の文）'))}${where ? '・' + esc(where) : ''}${D.chapters[e.c] && D.chapters[e.c].label ? '・' + esc(D.chapters[e.c].label) : ''}</div><div class="txt">${esc(e.t)}</div>`;
   d.prepend(pinBtn(e.pin, onPin));
   return d;
 }
@@ -694,6 +725,16 @@ function showRecap() {
   b.onclick = closeModal; m.firstChild.appendChild(b);
   document.body.appendChild(m);
 }
+
+// ---------- プレイ時間 ----------
+// 画面が見えていて、最後の操作から2分以内のあいだだけ数える（放置した時間は入れない）
+let lastInput = Date.now();
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { lastInput = Date.now(); }, true));
+setInterval(() => {
+  if (!S || S.done || document.visibilityState !== 'visible' || Date.now() - lastInput > 120000) return;
+  S.v.playSec = (S.v.playSec || 0) + 5;
+}, 5000);
+const hm = s => { s = s || 0; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}時間${m}分` : `${m}分`; };
 
 // ---------- 起動時の一括読み込み ----------
 // 背景をすべて先に読み込んでおき、遊んでいる間は通信しないようにする。

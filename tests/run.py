@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SHIOMI = (ROOT / "games/shiomi-port/index.html").as_uri()
 MINI = (ROOT / "tests/fixtures/mini/index.html").as_uri()
 HUB = (ROOT / "index.html").as_uri()
+KAMO = (ROOT / "games/kamomejima/index.html").as_uri()
 results = []
 
 
@@ -82,6 +83,9 @@ def shiomi_clear(b):
         click(pg, "聞く", "片桐")
     contra(pg, "何も関わっていない", "病院からもらってきた")
     assert state(pg)["f"].get("contra_lie") == 1
+    st = state(pg)
+    assert any("認めた" in c["t"] for c in st["cards"]), st["cards"]          # 新しい証言カード
+    assert [c for c in st["cards"] if c.get("id") == "katagiri_lie"][0].get("broken")  # 崩したカード
     click(pg, "推理", "片桐")
     for _ in range(7):
         click(pg, "つぎへ")
@@ -323,7 +327,7 @@ def hub(b):
     pg = hub_page(b)
     assert pg.locator(".game").count() == 4
     assert pg.locator(".game[data-id=epilogue]").count() == 0
-    assert pg.locator(".game.soon").count() == 3
+    assert pg.locator(".game.soon").count() == 2  # 第二作・第三作（第一作は試作版を公開中）
     pg.click(".game[data-id=shiomi-port]")
     pg.wait_for_selector("#title:not(.hide)")
     pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "移動", "居間")
@@ -348,6 +352,49 @@ def hub_epilogue(b):
     pg.evaluate("localStorage.setItem('mg:cleared', JSON.stringify(['kamomejima','furiko','fuyu-shiomi']))"); pg.reload()
     e = pg.locator(".game[data-id=epilogue]")
     assert "locked" not in e.get_attribute("class") and "最後のページ" in e.inner_text()
+    return pg.errs
+
+
+@test
+def kamomejima_ch1(b):
+    """鴎島館 第1章：港から停電まで通して遊べ、クリアの記録は付かない"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    for _ in range(3):
+        click(pg, "聞く", "三島")
+    click(pg, "移動", "連絡船の上"); click(pg, "調べる", "鴎島")
+    click(pg, "移動", "久我館・正面"); click(pg, "聞く", "磯村")
+    click(pg, "移動", "玄関ホール")
+    for _ in range(3):
+        click(pg, "聞く", "磯村")
+    for _ in range(3):
+        click(pg, "聞く", "沙耶")
+    click(pg, "調べる", "肖像画の銘板")
+    click(pg, "移動", "客室"); click(pg, "調べる", "旅行かばん")
+    click(pg, "移動", "談話室")
+    for p in ["康彦", "圭", "玲子"]:
+        click(pg, "聞く", p)
+    assert state(pg)["f"].get("dinner_called"), state(pg)["f"]
+    click(pg, "つぎへ"); click(pg, "つぎへ")
+    click(pg, "移動", "大食堂")
+    for _ in range(10):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("dinner_done")
+    click(pg, "聞く", "タキ"); click(pg, "聞く", "浅見"); click(pg, "聞く", "浅見")
+    click(pg, "聞く", "磯村"); click(pg, "聞く", "磯村")
+    click(pg, "移動", "玄関ホール"); click(pg, "聞く", "沙耶")
+    click(pg, "移動", "談話室"); click(pg, "聞く", "康彦"); click(pg, "聞く", "玲子")
+    click(pg, "聞く", "三島"); click(pg, "聞く", "三島")
+    assert state(pg)["f"].get("blackout_ready")
+    click(pg, "聞く", "鷹宮")
+    for _ in range(10):
+        click(pg, "つぎへ")
+    for _ in range(3):
+        click(pg, "つぎへ")
+    m = msg(pg)
+    assert "第1章 おわり" in m and "プレイ時間" in m, m
+    assert not pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')").count("kamomejima")
+    assert len(state(pg)["cards"]) >= 15, len(state(pg)["cards"])
     return pg.errs
 
 

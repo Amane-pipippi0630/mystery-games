@@ -110,3 +110,5 @@ header{display:flex;align-items:center;justify-content:space-between}
 .big:active,.pill:active,#modal .row:not([disabled]):active,.nb-tabs button:active,.nb-x:active{transform:scale(.96);filter:brightness(1.25)}
 .big.going{filter:brightness(1.25);pointer-events:none}
 body.leaving::after{content:'開いています…';position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#0e1117cc;color:var(--text);font-size:15px;letter-spacing:.1em;animation:fade .2s}
+.nb-entry .broken{display:inline-block;background:var(--accent2);color:#fff;border-radius:999px;font-size:10.5px;padding:0 8px;margin-right:6px}
+.nb-entry.is-broken .txt{color:var(--sub);text-decoration:line-through;text-decoration-color:#c2553f99}

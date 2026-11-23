@@ -56,7 +56,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `assistant`・`assistantHint` | 助手の人物idと、そのヒントの文（`{name}` が使える）。助手に聞くと、今いる場所でまだ大事な話（証言カードになる話）を聞いていない人がいれば、ふだんのヒントより先にこの文で教える |
 | `endings` | `{id: {bg, place, small, pages, finalBg, finalPlace, finalSmall, ranks, result}}` |
 
-`result` では `{turns}`（行動回数）・`{miss}`（まちがい回数）・`{rank}` が使える。`ranks` は上から順に条件を見て、最初に合ったものの `label` になる。
+`result` では `{turns}`（行動回数）・`{miss}`（まちがい回数）・`{rank}`・`{time}`（プレイ時間）が使える。`"clear": false` にすると、クリアの記録（作品選択の⭐️）を付けない（試作の途中までの終わりなどに使う）。`ranks` は上から順に条件を見て、最初に合ったものの `label` になる。
 
 ## 章（<章id>.json）
 
@@ -130,11 +130,16 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
   "if": "here:law",                               // つきつけられる条件（相手がいる場所など）
   "text": "片桐「…ああ、受け取りに行ったよ」",    // 正解のときの文
   "do": ["toast:片桐のうそを崩した"],
+  "card": "薬を受け取りに行ったと認めた",          // 認めた内容を新しい証言カードにする（cardId・p も書ける）
+  "p": "katagiri",                                // そのカードを言った人
+  "breaks": ["katagiri_lie"],                     // 「崩した」印を付けるカード（省略すると2枚とも）
   "notYet": "本人に突きつけましょう",               // 組み合わせは正しいが if を満たさないとき（ミスにならない）
   "doneText": "もう崩しましたよ"                    // 解いたあとにもう一度つきつけたとき
 }],
 "contradictWrong": "その2つは食い違っていないようです"  // まちがいのとき（ミス1回）
 ```
+
+正解すると、崩したカードには手帳で「崩した」の印と取り消し線が付き、認めた内容が新しい証言カードになる。`text` の最後で、助手に次の手がかりを示させると、何をすればいいか分かりやすい。
 
 ## 捜査手帳
 
