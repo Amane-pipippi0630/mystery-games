@@ -5,15 +5,20 @@
   python3 tools/build.py shiomi-port          # games/shiomi-port/index.html を作る
   python3 tools/build.py shiomi-port --check  # シナリオの点検だけする
   python3 tools/build.py tests/fixtures/mini  # フォルダを直接指定してもよい
+  python3 tools/build.py shiomi-port --inline # 背景もHTMLに埋め込み、1ファイルにする
 
 games/<id>/src/ に game.json・章ごとの <章id>.json・bg/<名前>.jpg を置く。
-エンジン（engine/）・シナリオ・背景画像をすべて1枚に埋め込むので、
-できたHTMLは開くだけで遊べ、最初の読み込みのあとは通信しない。
+エンジン（engine/）とシナリオはHTMLに埋め込み、背景は幅1280pxのWebPにして
+games/<id>/bg/ に書き出す。背景は起動時にまとめて読み込むので、遊んでいる間は通信しない。
 """
-import base64, json, re, sys
+import base64, io, json, re, shutil, sys
 from pathlib import Path
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
+BG_WIDTH = 1280      # 背景の最大幅（px）
+BG_QUALITY = 80      # WebPの画質
+NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
 TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
 EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter"}
@@ -112,18 +117,28 @@ def load(gid):
         if c.get("id") != cid:
             raise SystemExit(f"{cid}.json の id が {c.get('id')} になっています")
         g["chapters"][cid] = c
-    bgdir = src / "bg"
     g["assets"] = {"bg": {}}
+    g["_bgsrc"] = {}
+    bgdir = src / "bg"
     if bgdir.exists():
         for f in sorted(bgdir.iterdir()):
-            mime = {".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png", ".webp": "webp"}.get(f.suffix.lower())
-            if mime:
-                g["assets"]["bg"][f.stem] = f"data:image/{mime};base64," + base64.b64encode(f.read_bytes()).decode()
+            if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"):
+                g["_bgsrc"][f.stem] = f
+                g["assets"]["bg"][f.stem] = f"bg/{f.stem}.webp"
     return g
 
 
 def check(g):
     c = Checker(g)
+    for k, f in g["_bgsrc"].items():
+        if not NAME.match(k):
+            c.err(f"src/bg/{f.name}", "ファイル名は英小文字・数字・ハイフンにしてください")
+        else:
+            w, h = Image.open(f).size
+            if w < 1024:
+                c.warn(f"src/bg/{f.name}", f"幅が {w}px です（1280px以上がおすすめ）")
+            if abs(w / h - 16 / 9) > 0.03:
+                c.warn(f"src/bg/{f.name}", f"縦横比が16:9ではありません（{w}x{h}）。はみ出た部分は切れます")
     if g["start"] not in g["chapters"]:
         c.err("game", f"start の章 {g['start']} がありません")
     bgs = g["assets"]["bg"]
@@ -196,6 +211,24 @@ def build(gid, only_check=False):
     if only_check:
         print("点検OK")
         return
+    out_dir = gamedir(gid)
+    inline = "--inline" in sys.argv
+    bg_out = out_dir / "bg"
+    if bg_out.exists():
+        shutil.rmtree(bg_out)
+    total = 0
+    for k, f in g.pop("_bgsrc").items():
+        im = Image.open(f).convert("RGB")
+        if im.width > BG_WIDTH:
+            im = im.resize((BG_WIDTH, round(BG_WIDTH * im.height / im.width)), Image.LANCZOS)
+        buf = io.BytesIO()
+        im.save(buf, "WEBP", quality=BG_QUALITY, method=6)
+        total += buf.tell()
+        if inline:
+            g["assets"]["bg"][k] = "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
+        else:
+            bg_out.mkdir(exist_ok=True)
+            (bg_out / f"{k}.webp").write_bytes(buf.getvalue())
     eng = ROOT / "engine"
     data = json.dumps(g, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = (eng / "template.html").read_text(encoding="utf-8")
@@ -203,9 +236,10 @@ def build(gid, only_check=False):
                 .replace("{{CSS}}", (eng / "engine.css").read_text(encoding="utf-8"))
                 .replace("{{JS}}", (eng / "engine.js").read_text(encoding="utf-8"))
                 .replace("{{DATA}}", data))
-    out = gamedir(gid) / "index.html"
+    out = out_dir / "index.html"
     out.write_text(html, encoding="utf-8")
-    print(f"できあがり: {out}（{out.stat().st_size // 1024} KB）")
+    n = len(g["assets"]["bg"])
+    print(f"できあがり: {out}（{out.stat().st_size // 1024} KB）、背景 {n} 枚 {total // 1024} KB" + ("（HTMLに埋め込み）" if inline else f"（{bg_out.name}/）"))
 
 
 if __name__ == "__main__":

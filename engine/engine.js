@@ -359,7 +359,43 @@ function newGame() {
 }
 function begin() { $('wrap').classList.remove('hide'); startChapter(D.start); }
 
+// ---------- 起動時の一括読み込み ----------
+// 背景をすべて先に読み込んでおき、遊んでいる間は通信しないようにする。
+function preload() {
+  const urls = Object.values((D.assets && D.assets.bg) || {});
+  let done = 0, failed = 0;
+  const bar = $('loadbar'), txt = $('loadtxt');
+  const tick = () => { bar.style.width = (urls.length ? done / urls.length * 100 : 100) + '%'; txt.textContent = `読み込み中… ${done}/${urls.length}`; };
+  tick();
+  // 日本語フォントは文字ごとに分割配信されるので、ゲームで使う文字をすべて一度描いて先に取り寄せる
+  const fonts = new Promise(res => {
+    const chars = [...new Set(JSON.stringify(Object.assign({}, D, { assets: null })))].join('');
+    const box = document.createElement('div');
+    box.setAttribute('aria-hidden', 'true');
+    box.style.cssText = 'position:absolute;left:-9999px;top:0;width:10px;overflow:hidden;opacity:0;pointer-events:none';
+    box.innerHTML = [["'Noto Sans JP'", 400], ["'Noto Sans JP'", 500], ["'Noto Sans JP'", 700], ["'Shippori Mincho'", 700], ["'Shippori Mincho'", 800]]
+      .map(([f, w]) => `<span style="font-family:${f};font-weight:${w}">${chars.replace(/[<&]/g, '')}</span>`).join('');
+    document.body.appendChild(box);
+    const finish = () => { box.remove(); res(); };
+    if (!document.fonts) return finish();
+    setTimeout(finish, 8000);
+    requestAnimationFrame(() => document.fonts.ready.then(finish, finish));
+  });
+  return Promise.all([fonts, ...urls.map(u => new Promise(res => {
+    const im = new Image();
+    im.onload = () => { done++; tick(); res(); };
+    im.onerror = () => { done++; failed++; tick(); res(); };
+    im.src = u;
+    preloaded.push(im);
+  }))]).then(() => failed);
+}
+const preloaded = [];
+
 document.title = D.title;
 window.__mg = { get state() { return S; }, cond, D };
-toTitle();
+preload().then(failed => {
+  $('loading').classList.add('hide');
+  toTitle();
+  if (failed) toast(`背景 ${failed} 枚を読み込めませんでした`);
+});
 })();
