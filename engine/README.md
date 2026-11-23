@@ -52,7 +52,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `titleScreen` | `eyebrow`・`title`（`<br>` 可）・`lead` |
 | `prologue` | あらすじ画面。`paragraphs`（HTML可）・`cast`（`[名前, 説明]` の配列）・`button`。なければ省略 |
 | `items` | `{id: 表示名}` |
-| `people` | `{id: {name, short}}`。`short` は「みせる」「すいり」で使う短い名前 |
+| `people` | `{id: {name, short}}`。`short` は「見せる」「推理」で使う短い名前 |
 | `assistant`・`assistantHint` | 助手の人物idと、そのヒントの文（`{name}` が使える）。助手に聞くと、今いる場所でまだ大事な話（証言カードになる話）を聞いていない人がいれば、ふだんのヒントより先にこの文で教える |
 | `endings` | `{id: {bg, place, small, pages, finalBg, finalPlace, finalSmall, ranks, result}}` |
 
@@ -71,7 +71,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `show` | `{人物id: {アイテムid: 返事}}` |
 | `look` | `{調べるものid: 返事}` |
 | `puzzles` | 番号入力の謎解き。`{id: {length, answer, label, prompt, display, success, fail, cancel}}` |
-| `accuse` | 犯人の指名。`{suspects, culprit, required, missingText, ending, wrong}`。犯人を選んだが `required` がそろっていないときは `missingText`（`{name}`・`{missing}` が使える）。`{missing}` で足りない証拠を並べると答えが分かってしまうので、ふつうは使わず、まだ疑いの晴れていない人と同じ文にする |
+| `accuse` | 犯人の指名。`{suspects, culprit, required, missingText, ending, wrong, noneText}`。選べるのは `suspects` のうち一度でも話を聞いた人だけ（だれもいなければ `noneText`）。犯人を選んだが `required` がそろっていないときは `missingText`（`{name}`・`{missing}` が使える）。`{missing}` で足りない証拠を並べると答えが分かってしまうので、ふつうは使わず、まだ疑いの晴れていない人と同じ文にする |
 | `talkDefault`・`showDefault` | 返事がないときの文。`{name}` が使える |
 | `recap` | 「これまでの話」。章のはじめと「つづきから」で表示し、手帳の「これまで」タブにも残る |
 
@@ -138,7 +138,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 
 ## 捜査手帳
 
-画面右上の「手帳」から開く。新しい証言カードがあると、数がバッジで出る。
+画面下のコマンド「手帳」から開く。新しい証言カードがあると、数がバッジで出る。
 
 | タブ | 内容 |
 |---|---|

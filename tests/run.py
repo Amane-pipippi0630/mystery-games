@@ -43,7 +43,7 @@ def msg(pg):
 
 def contra(pg, a, b):
     """手帳を開き、文に a・b を含むカードを選んでつきつける"""
-    pg.click("#nb"); pg.click("#nbook .nb-tabs >> text=証言カード")
+    click(pg, "手帳"); pg.click("#nbook .nb-tabs >> text=証言カード")
     pg.click("#nbook .nb-contra >> text=矛盾をつく")
     for t in (a, b):
         pg.locator("#nbook .nb-entry", has_text=t).first.click()
@@ -65,24 +65,24 @@ def new_shiomi(b):
 def shiomi_clear(b):
     """汐見港殺人事件を最短手順でクリアできる"""
     pg = new_shiomi(b)
-    click(pg, "しらべる", "薬瓶"); click(pg, "しらべる", "机")
-    click(pg, "いどう", "居間"); click(pg, "きく", "沙織"); click(pg, "きく", "沙織"); click(pg, "しらべる", "写真立て")
-    click(pg, "みせる", "カプセル", "ハル")
-    click(pg, "いどう", "汐見警察署"); click(pg, "みせる", "カプセル", "大場")
-    click(pg, "いどう", "書斎"); click(pg, "しらべる", "金庫")
+    click(pg, "調べる", "薬瓶"); click(pg, "調べる", "机")
+    click(pg, "移動", "居間"); click(pg, "聞く", "沙織"); click(pg, "聞く", "沙織"); click(pg, "調べる", "写真立て")
+    click(pg, "見せる", "カプセル", "ハル")
+    click(pg, "移動", "汐見警察署"); click(pg, "見せる", "カプセル", "大場")
+    click(pg, "移動", "書斎"); click(pg, "調べる", "金庫")
     for d in "0714":
         click(pg, d)
     assert "帳簿" in msg(pg)
-    click(pg, "いどう", "汐見水産"); click(pg, "みせる", "帳簿", "野村")
-    click(pg, "いどう", "汐見病院"); click(pg, "みせる", "カプセル", "薬剤師")
-    click(pg, "いどう", "汐見警察署"); click(pg, "きく", "大場")
+    click(pg, "移動", "汐見水産"); click(pg, "見せる", "帳簿", "野村")
+    click(pg, "移動", "汐見病院"); click(pg, "見せる", "カプセル", "薬剤師")
+    click(pg, "移動", "汐見警察署"); click(pg, "聞く", "大場")
     assert "report" in state(pg)["items"]
-    click(pg, "いどう", "片桐法律事務所")
+    click(pg, "移動", "片桐法律事務所")
     for _ in range(3):
-        click(pg, "きく", "片桐")
+        click(pg, "聞く", "片桐")
     contra(pg, "何も関わっていない", "病院からもらってきた")
     assert state(pg)["f"].get("contra_lie") == 1
-    click(pg, "すいり", "片桐")
+    click(pg, "推理", "片桐")
     for _ in range(7):
         click(pg, "つぎへ")
     m = msg(pg)
@@ -100,7 +100,7 @@ def no_network_while_playing(b):
     before = len(pg.reqs)
     pg.click("text=はじめから"); pg.click("#bGo")
     for place in ["居間", "汐見警察署", "汐見水産", "書斎"]:
-        click(pg, "いどう", place)
+        click(pg, "移動", place)
         pg.wait_for_function("document.querySelector('#bg img') && document.querySelector('#bg img').complete")
     after = [u for u in pg.reqs[before:] if not u.startswith("data:")]
     assert after == [], after
@@ -108,7 +108,7 @@ def no_network_while_playing(b):
 
 
 def move_options(pg):
-    click(pg, "いどう")
+    click(pg, "移動")
     opts = pg.locator("#cmd button").all_inner_texts()
     click(pg, "もどる")
     return opts
@@ -118,14 +118,14 @@ def move_options(pg):
 def unlock_once(b):
     """片桐法律事務所は汐見水産で知るまで行けず、「行けるようになった」は1回だけ出る"""
     pg = new_shiomi(b)
-    click(pg, "しらべる", "薬瓶"); click(pg, "いどう", "居間"); click(pg, "みせる", "カプセル", "ハル")
+    click(pg, "調べる", "薬瓶"); click(pg, "移動", "居間"); click(pg, "見せる", "カプセル", "ハル")
     opts = move_options(pg)
     assert "汐見病院・薬局" in opts and "片桐法律事務所" not in opts, opts
-    click(pg, "しらべる", "写真立て")  # 何も開かない行動
-    click(pg, "いどう", "汐見水産")
+    click(pg, "調べる", "写真立て")  # 何も開かない行動
+    click(pg, "移動", "汐見水産")
     for _ in range(5):
-        click(pg, "きく", "秘書の野村")
-    click(pg, "しらべる", "社長室")
+        click(pg, "聞く", "秘書の野村")
+    click(pg, "調べる", "社長室")
     assert "片桐法律事務所" in move_options(pg)
     log = pg.evaluate("window.__mg.toastLog")
     assert log.count("片桐法律事務所に行けるようになった") == 1, log
@@ -137,19 +137,19 @@ def unlock_once(b):
 def contradiction(b):
     """矛盾をつく：まちがえるとミス、相手がいない場所では使えず、片桐の前でつきつけると崩せる"""
     pg = new_shiomi(b)
-    click(pg, "しらべる", "薬瓶"); click(pg, "しらべる", "遺体の跡")
-    click(pg, "いどう", "居間"); click(pg, "みせる", "カプセル", "ハル")
-    click(pg, "いどう", "汐見水産"); click(pg, "しらべる", "社長室")
-    click(pg, "いどう", "片桐法律事務所")
+    click(pg, "調べる", "薬瓶"); click(pg, "調べる", "遺体の跡")
+    click(pg, "移動", "居間"); click(pg, "見せる", "カプセル", "ハル")
+    click(pg, "移動", "汐見水産"); click(pg, "調べる", "社長室")
+    click(pg, "移動", "片桐法律事務所")
     for _ in range(3):
-        click(pg, "きく", "片桐")
+        click(pg, "聞く", "片桐")
     contra(pg, "胸をおさえて", "金曜の欄")
     assert state(pg)["v"]["miss"] == 1
-    click(pg, "いどう", "書斎")
+    click(pg, "移動", "書斎")
     contra(pg, "何も関わっていない", "病院からもらってきた")
     assert "法律事務所へ" in msg(pg) and state(pg)["v"]["miss"] == 1
     assert not state(pg)["f"].get("contra_lie")
-    click(pg, "いどう", "片桐法律事務所")
+    click(pg, "移動", "片桐法律事務所")
     contra(pg, "病院からもらってきた", "何も関わっていない")
     assert state(pg)["f"].get("contra_lie") == 1
     contra(pg, "病院からもらってきた", "何も関わっていない")
@@ -161,17 +161,17 @@ def contradiction(b):
 def assistant_points_to_unheard(b):
     """マコトに聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる"""
     pg = new_shiomi(b)
-    click(pg, "いどう", "居間")
-    click(pg, "きく", "マコト")
+    click(pg, "移動", "居間")
+    click(pg, "聞く", "マコト")
     m = msg(pg)
     assert "沙織さんはまだ何か知っていそう" in m, m
     for _ in range(2):
-        click(pg, "きく", "沙織")
-    click(pg, "きく", "マコト")
+        click(pg, "聞く", "沙織")
+    click(pg, "聞く", "マコト")
     assert "ハルさんはまだ何か知っていそう" in msg(pg)
     for _ in range(4):
-        click(pg, "きく", "ハル")
-    click(pg, "きく", "マコト")
+        click(pg, "聞く", "ハル")
+    click(pg, "聞く", "マコト")
     m = msg(pg)
     assert "知っていそう" not in m, m  # 残っていなければ、ふだんのヒントに戻る
     assert pg.locator("#cmd button.new, #here span.new").count() == 0
@@ -180,16 +180,28 @@ def assistant_points_to_unheard(b):
 
 @test
 def shiomi_wrong_and_missing(b):
-    """証拠が足りないときは逮捕できず、足りないものは明かさない。疑いの晴れた人を選ぶとミス"""
+    """推理には話を聞いた人だけが出る。証拠が足りないときは足りないものを明かさない。疑いの晴れた人を選ぶとミス"""
     pg = new_shiomi(b)
-    click(pg, "すいり", "片桐")
+    click(pg, "推理")
+    assert "だれにも話を聞いていない" in msg(pg)
+    click(pg, "移動", "居間"); click(pg, "聞く", "沙織"); click(pg, "聞く", "沙織")
+    click(pg, "推理")
+    opts = pg.locator("#cmd button").all_inner_texts()
+    assert "沙織" in opts and "片桐" not in opts and "ハル" not in opts, opts
+    click(pg, "もどる")
+    click(pg, "移動", "汐見水産")
+    for _ in range(3):
+        click(pg, "聞く", "秘書の野村")
+    click(pg, "移動", "片桐法律事務所"); click(pg, "聞く", "片桐")
+    click(pg, "移動", "雀荘"); click(pg, "聞く", "隆")
+    click(pg, "推理", "片桐")
     m1 = msg(pg)
     assert "まだそろっていません" in m1 and "動機" not in m1 and "鑑定" not in m1, m1
-    click(pg, "すいり", "隆")
+    click(pg, "推理", "隆")
     m2 = msg(pg)
     assert m2.replace("隆", "片桐") == m1, (m1, m2)  # 片桐だけ反応が違うと犯人が分かってしまう
     assert state(pg)["v"]["miss"] == 0
-    click(pg, "すいり", "沙織")
+    click(pg, "推理", "沙織")
     assert state(pg)["v"]["miss"] == 1
     return pg.errs
 
@@ -198,9 +210,9 @@ def shiomi_wrong_and_missing(b):
 def save_and_load(b):
     """スロットにセーブしてロードすると、その時点に戻る"""
     pg = new_shiomi(b)
-    click(pg, "しらべる", "机")
+    click(pg, "調べる", "机")
     pg.click("#menu"); pg.click("#modal .row:has-text('セーブ')"); pg.click("#modal .row:has-text('スロット1')")
-    click(pg, "しらべる", "薬瓶")
+    click(pg, "調べる", "薬瓶")
     assert len(state(pg)["items"]) == 2
     pg.click("#menu"); pg.click("#modal .row:has-text('ロード')"); pg.click("#modal .row:has-text('スロット1')")
     assert state(pg)["items"] == ["memo"]
@@ -211,7 +223,7 @@ def save_and_load(b):
 def autosave_resume(b):
     """ページを開き直すと「つづきから」で再開できる"""
     pg = new_shiomi(b)
-    click(pg, "いどう", "居間")
+    click(pg, "移動", "居間")
     pg.reload()
     pg.click("text=つづきから")
     assert state(pg)["loc"] == "living"
@@ -225,18 +237,19 @@ def chapters(b):
     pg.click("text=はじめから")
     assert pg.locator("#card").inner_text().startswith("第一章")
     pg.click("#card")
-    click(pg, "きく", "助手A"); click(pg, "きく", "助手A"); click(pg, "きく", "助手A")
+    click(pg, "聞く", "助手A"); click(pg, "聞く", "助手A"); click(pg, "聞く", "助手A")
     assert "二回目以降" in msg(pg)
-    click(pg, "しらべる", "箱"); click(pg, "つぎへ")
+    click(pg, "調べる", "箱"); click(pg, "つぎへ")
     assert "第二章" in pg.locator("#card").inner_text()
     pg.click("#card")
     assert "箱から鍵" in pg.locator("#modal .recap").inner_text()  # これまでの話
     pg.click("#modal >> text=つづける")
     assert state(pg)["chapter"] == "ch2"
     assert pg.evaluate("!!localStorage.getItem('mg:test-mini:chap:ch2')")
-    click(pg, "すいり", "A")
+    click(pg, "聞く", "犯人X")
+    click(pg, "推理", "A")
     assert state(pg)["v"]["miss"] == 1
-    click(pg, "すいり", "X"); click(pg, "つぎへ")
+    click(pg, "推理", "X"); click(pg, "つぎへ")
     assert "完 OK" in msg(pg)
     return pg.errs
 
@@ -245,12 +258,12 @@ def chapters(b):
 def notebook(b):
     """捜査手帳：証言カード、ピン留め、会話ログの絞り込みと検索、メモ"""
     pg = new_shiomi(b)
-    click(pg, "きく", "マコト")
-    click(pg, "いどう", "居間"); click(pg, "きく", "ハル"); click(pg, "きく", "ハル"); click(pg, "きく", "沙織")
+    click(pg, "聞く", "マコト")
+    click(pg, "移動", "居間"); click(pg, "聞く", "ハル"); click(pg, "聞く", "ハル"); click(pg, "聞く", "沙織")
     st = state(pg)
     assert len(st["cards"]) == 3, st["cards"]
     assert pg.locator("#nbn").inner_text() == "3"
-    pg.click("#nb")
+    click(pg, "手帳")
     assert pg.locator("#nbook .nb-entry").count() == 3
     assert pg.locator("#nbn").inner_text() == ""  # 見たらバッジが消える
     pg.locator("#nbook .nb-entry .pin").first.click()
@@ -289,7 +302,7 @@ def hub(b):
     assert pg.locator(".game.soon").count() == 3
     pg.click(".game[data-id=shiomi-port]")
     pg.wait_for_selector("#title:not(.hide)")
-    pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "いどう", "居間")
+    pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "移動", "居間")
     pg.click("#menu"); pg.click("#modal .row:has-text('タイトルへ')")
     pg.click("text=作品選択へ")
     pg.wait_for_selector(".game")
