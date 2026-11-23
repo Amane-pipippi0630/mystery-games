@@ -4,12 +4,13 @@
   "hub": "../../index.html",
   "start": "ch1",
   "chapters": [
-    "ch1"
+    "ch1",
+    "ch2"
   ],
   "titleScreen": {
     "eyebrow": "汐見ミステリー 第一作",
     "title": "鴎島館の<br>論理",
-    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第1章まで遊べる試作版）</small>"
+    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第2章まで遊べる試作版）</small>"
   },
   "prologue": {
     "eyebrow": "PROLOGUE",
@@ -63,7 +64,9 @@
   "assistant": "takamiya",
   "assistantHint": "鷹宮「{name}さん、まだ何か話してくれそうやで。いろんな話題で聞いてみ」",
   "talkDefault": "{name}は、いまは話す気がなさそうだ。",
-  "items": {},
+  "items": {
+    "file": "空の革のファイル"
+  },
   "people": {
     "takamiya": {
       "name": "鷹宮"
@@ -112,6 +115,25 @@
       ],
       "result": "～ 第1章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件\n\nこの章は試作です。遊んだ時間と、長すぎた・短すぎたところを教えてください。",
       "clear": false
+    },
+    "ch2end": {
+      "bg": "library",
+      "place": "書庫",
+      "small": "第二章",
+      "pages": [
+        "第2章「書庫の密室」 おわり",
+        "――密室を作ったのは、誰なのか。\n\n（第3章「鷹宮の講義」へつづく）"
+      ],
+      "finalBg": "island",
+      "finalPlace": "つづく",
+      "finalSmall": "試作版",
+      "clear": false,
+      "ranks": [
+        {
+          "label": ""
+        }
+      ],
+      "result": "～ 第2章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件\n\nこの章は試作です。遊んだ時間と、分かりにくかったところを教えてください。"
     }
   },
   "topics": {
@@ -120,7 +142,9 @@
     "hito": "一族のこと",
     "yakata": "館と島のこと",
     "hint": "相談する",
-    "dangi": "ミステリー談義"
+    "dangi": "ミステリー談義",
+    "teiden": "停電のあいだ",
+    "asami": "浅見さんのこと"
   },
   "hintTopic": "hint",
   "notes": {

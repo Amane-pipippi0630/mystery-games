@@ -678,7 +678,7 @@ const preloaded = [];
 
 window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.remove('leaving'); toTitle(); } });
 document.title = D.title;
-window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog };
+window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();
