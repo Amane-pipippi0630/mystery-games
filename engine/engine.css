@@ -69,3 +69,6 @@ header{display:flex;align-items:center;justify-content:space-between}
 #card .tap{color:var(--sub);font-size:12px;margin-top:30px}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 #bg,#bg img{width:100%;height:100%;display:block;object-fit:cover}
+#loading .bar{width:220px;height:6px;border-radius:99px;background:var(--panel2);overflow:hidden}
+#loading .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#loading p{color:var(--sub);font-size:13px}

@@ -21,10 +21,12 @@ def test(fn):
 def page(b, url):
     ctx = b.new_context(viewport={"width": 390, "height": 844})
     pg = ctx.new_page()
-    errs = []
+    errs, reqs = [], []
     pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.on("request", lambda r: reqs.append(r.url))
     pg.goto(url)
-    pg.errs = errs
+    pg.wait_for_selector("#title:not(.hide)")
+    pg.errs, pg.reqs = errs, reqs
     return pg
 
 
@@ -71,6 +73,22 @@ def shiomi_clear(b):
     m = msg(pg)
     assert "評価：名警部" in m, m
     assert "shiomi-port" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
+    return pg.errs
+
+
+@test
+def no_network_while_playing(b):
+    """背景は起動時に読み込み済みで、遊んでいる間は通信しない"""
+    pg = page(b, SHIOMI)
+    assert sum(".webp" in u for u in pg.reqs) == 8, pg.reqs
+    assert pg.evaluate("[...document.querySelectorAll('#loading')].every(e => e.classList.contains('hide'))")
+    before = len(pg.reqs)
+    pg.click("text=はじめから"); pg.click("#bGo")
+    for place in ["居間", "汐見警察署", "汐見水産", "書斎"]:
+        click(pg, "いどう", place)
+        pg.wait_for_function("document.querySelector('#bg img') && document.querySelector('#bg img').complete")
+    after = [u for u in pg.reqs[before:] if not u.startswith("data:")]
+    assert after == [], after
     return pg.errs
 
 
