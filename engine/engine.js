@@ -23,7 +23,7 @@ function markCleared() {
 // ---------- 状態 ----------
 let S = null;
 let pending = {};
-const fresh = () => ({ chapter: D.start, loc: null, f: {}, v: { turns: 0, miss: 0 }, items: [], seq: {}, done: false, log: [] });
+const fresh = () => ({ chapter: D.start, loc: null, f: {}, v: { turns: 0, miss: 0 }, items: [], seq: {}, done: false, log: [], cards: [], memo: '', seenCards: 0 });
 const ch = () => D.chapters[S.chapter];
 const loc = () => ch().locations[S.loc];
 const person = p => D.people[p] || { name: p };
@@ -89,7 +89,7 @@ function run(list) {
       case 'set': { const [n, v] = a.split('='); S.v[n] = +v; break; }
       case 'inc': S.v[a] = (S.v[a] || 0) + 1; break;
       case 'miss': S.v.miss = (S.v.miss || 0) + 1; break;
-      case 'toast': toast(a); break;
+      case 'toast': if (!S.toasted) S.toasted = []; if (!S.toasted.includes(a)) { S.toasted.push(a); toast(a); } break;
       case 'goto': pending.goto = a; break;
       case 'puzzle': pending.puzzle = a; break;
       case 'ending': pending.ending = a; break;
@@ -111,10 +111,11 @@ function resolve(entry, key) {
 
 // ---------- 表示 ----------
 let typer = null, full = '', toastT;
-function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
-function say(t) {
+const toastLog = [];
+function toast(t) { toastLog.push(t); const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
+function say(t, meta) {
   if (t == null) return;
-  if (S) S.log.push([S.chapter, S.loc, t]);
+  if (S && !(meta && meta.nolog)) S.log.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t });
   const sp = t.match(/^([^「\n]{1,10})「([\s\S]*)」$/);
   const w = $('who');
   if (sp) { w.textContent = sp[1]; w.classList.add('on'); t = '「' + sp[2] + '」'; } else w.classList.remove('on');
@@ -131,9 +132,9 @@ function setScene(bgKey, place, small) {
 }
 function renderScene() {
   const L = loc();
+  updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
   $('here').innerHTML = (L.people || []).map(p => `<span>${person(p).name}</span>`).join('');
-  $('bagn').textContent = S.items.length;
 }
 
 const IC = {
@@ -166,15 +167,31 @@ function main() {
   cmds.push(['もちもの', showItems]);
   btns(cmds);
 }
-function act(rule) {
+// 行けるようになった場所は、エンジンが自動で知らせる（シナリオに toast を書かなくてよい）
+const openLocs = () => Object.keys(ch().locations).filter(k => avail(k));
+let openBefore = null;
+function act(rule, meta) {
   S.v.turns = (S.v.turns || 0) + 1;
   pending = {};
-  if (rule) { run(rule.do); if (rule.text) say(rule.text); }
+  openBefore = openLocs();
+  if (rule) { run(rule.do); if (rule.text) say(rule.text, meta); if (rule.card) addCard(rule, meta); }
   after();
+}
+// 証言カード：ルールに "card": true（その文をそのまま）か "card": "要約" を付けると記録される
+function addCard(rule, meta) {
+  const t = typeof rule.card === 'string' ? rule.card : rule.text;
+  if (S.cards.some(c => c.t === t)) return;
+  S.cards.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t, pin: false });
+  toast('証言カードに記録した');
+  updateNbBadge();
 }
 function after() {
   const p = pending; pending = {};
-  $('bagn').textContent = S.items.length;
+  if (openBefore) {
+    const now = openLocs().filter(k => !openBefore.includes(k));
+    if (now.length) toast(now.map(k => ch().locations[k].name).join('・') + 'に行けるようになった');
+    openBefore = null;
+  }
   if (p.goto) { S.loc = p.goto; renderScene(); }
   autosave();
   if (p.puzzle) return openPuzzle(p.puzzle);
@@ -188,7 +205,7 @@ function moveMenu() {
   btns([...ids.map(k => [ch().locations[k].name, () => moveTo(k)]), back], 'どこへ行く？');
 }
 function moveTo(id) {
-  S.loc = id; S.v.turns = (S.v.turns || 0) + 1; pending = {};
+  S.loc = id; S.v.turns = (S.v.turns || 0) + 1; pending = {}; openBefore = openLocs();
   runAll(ch().onMove);
   renderScene();
   const r = resolve(loc().arrive, 'arrive:' + id);
@@ -200,7 +217,7 @@ function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
   const r = resolve(e, key);
   if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
-  act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) });
+  act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
 function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), back], '何を調べる？'); }
 function look(o) {
@@ -212,7 +229,7 @@ function showMenu() {
   btns([...S.items.map(i => [D.items[i], () => {
     btns([...(loc().people || []).map(p => [person(p).name, () => {
       const r = resolve(((ch().show || {})[p] || {})[i], 'show:' + p + ':' + i);
-      act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) });
+      act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) }, { p });
     }]), ['もどる', showMenu, 'back']], D.items[i] + 'をだれに見せる？');
   }]), back], '何を見せる？');
 }
@@ -251,7 +268,7 @@ function startChapter(id) {
   const C = ch();
   S.loc = C.start.loc;
   store.set('chap:' + id, snapshot((C.label ? C.label + ' ' : '') + (C.title || '') + 'のはじめ'));
-  const go = () => { renderScene(); say(C.start.text); autosave(); main(); };
+  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); };
   if (C.card === false) return go();
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="n">${C.label || ''}</div><div class="t">${C.title || ''}</div><div class="tap">タップしてすすむ</div>`;
@@ -321,14 +338,18 @@ $('menu').onclick = () => {
     { t: 'タイトルへ', s: '進み具合はオートセーブされています', fn: () => { closeModal(); toTitle(); } },
   ]);
 };
-$('bag').onclick = () => { if (S && !S.done) showItems(); };
+$('nb').onclick = () => { if (S) openNotebook(); };
 
 function resume(snap) {
   closeModal();
   S = JSON.parse(JSON.stringify(snap.state));
   $('title').classList.add('hide'); $('prologue').classList.add('hide'); $('wrap').classList.remove('hide');
   if (S.done) { toTitle(); return; }
-  renderScene(); say(D.resumeText || '捜査を再開した。'); autosave(); main();
+  for (const k of ['log', 'cards']) if (!S[k]) S[k] = [];
+  S.log = S.log.map(e => Array.isArray(e) ? { c: e[0], l: e[1], p: null, t: e[2] } : e);
+  if (S.memo == null) S.memo = '';
+  renderScene(); say(D.resumeText || '捜査を再開した。', { nolog: true }); autosave(); main(); updateNbBadge();
+  if (ch().recap) showRecap();
 }
 
 // ---------- タイトル ----------
@@ -358,6 +379,109 @@ function newGame() {
   $('bGo').onclick = () => { pr.classList.add('hide'); begin(); };
 }
 function begin() { $('wrap').classList.remove('hide'); startChapter(D.start); }
+
+
+// ---------- 捜査手帳 ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const placeName = (c, l) => { const C = D.chapters[c]; return (C && C.locations[l] && C.locations[l].name) || ''; };
+const speaker = e => e.p ? person(e.p).name : ((e.t.match(/^([^「\n]{1,10})「/) || [])[1] || '');
+function updateNbBadge() {
+  const n = S ? S.cards.length - (S.seenCards || 0) : 0;
+  $('nbn').textContent = n > 0 ? n : '';
+  $('nbn').style.display = n > 0 ? '' : 'none';
+}
+let nbTab = 'cards', nbQ = { who: '', place: '', ch: '', pin: false, q: '' };
+function openNotebook(tab) {
+  if (tab) nbTab = tab;
+  closeModal();
+  const old = $('nbook'); if (old) old.remove();
+  const m = document.createElement('div'); m.id = 'nbook';
+  const tabs = [['cards', '証言カード'], ['log', '会話ログ'], ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
+  m.innerHTML = `<div class="nb-head"><h3>捜査手帳</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
+    <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <div class="nb-body"></div>`;
+  m.querySelector('.nb-x').onclick = () => { m.remove(); };
+  m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; openNotebook(); });
+  document.body.appendChild(m);
+  const body = m.querySelector('.nb-body');
+  ({ cards: nbCards, log: nbLog, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
+}
+const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
+function entryEl(e, onPin, isCard) {
+  const d = document.createElement('div'); d.className = 'nb-entry' + (e.pin ? ' pinned' : '');
+  const who = speaker(e), where = placeName(e.c, e.l);
+  d.innerHTML = `<div class="meta">${esc(who || (isCard ? '調べたこと' : '（地の文）'))}${where ? '・' + esc(where) : ''}${D.chapters[e.c] && D.chapters[e.c].label ? '・' + esc(D.chapters[e.c].label) : ''}</div><div class="txt">${esc(e.t)}</div>`;
+  d.prepend(pinBtn(e.pin, onPin));
+  return d;
+}
+function nbCards(body) {
+  S.seenCards = S.cards.length; updateNbBadge(); autosave();
+  const only = nbQ.pinCards;
+  const bar = document.createElement('div'); bar.className = 'nb-bar';
+  bar.innerHTML = `<label><input type="checkbox" ${only ? 'checked' : ''}> ピン留めだけ</label><span class="cnt">${S.cards.length}枚</span>`;
+  bar.querySelector('input').onchange = e => { nbQ.pinCards = e.target.checked; openNotebook(); };
+  body.appendChild(bar);
+  const list = S.cards.filter(c => !only || c.pin);
+  if (!list.length) body.insertAdjacentHTML('beforeend', '<p class="nb-empty">まだ証言カードはありません。大事な証言を聞くと、ここに記録されます。</p>');
+  list.forEach(c => body.appendChild(entryEl(c, () => { c.pin = !c.pin; autosave(); openNotebook(); }, true)));
+}
+function nbLog(body) {
+  const whoSet = [...new Set(S.log.map(speaker).filter(Boolean))];
+  const placeSet = [...new Set(S.log.map(e => e.c + '|' + e.l).filter(k => !k.endsWith('|null')))];
+  const chSet = [...new Set(S.log.map(e => e.c))];
+  const sel = (key, opts, label) => `<select data-k="${key}"><option value="">${label}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${nbQ[key] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+  const bar = document.createElement('div'); bar.className = 'nb-filter';
+  bar.innerHTML = `<input type="search" placeholder="ことばで探す" value="${esc(nbQ.q)}">`
+    + sel('who', whoSet.map(w => [w, w]), '話した人：すべて')
+    + sel('place', placeSet.map(k => { const [c, l] = k.split('|'); return [k, placeName(c, l)]; }), '場所：すべて')
+    + (chSet.length > 1 ? sel('ch', chSet.map(c => [c, D.chapters[c].label || D.chapters[c].title || c]), '章：すべて') : '')
+    + `<label><input type="checkbox" class="pinonly" ${nbQ.pin ? 'checked' : ''}> ピン留めだけ</label>`;
+  body.appendChild(bar);
+  const list = document.createElement('div'); body.appendChild(list);
+  const draw = () => {
+    const q = nbQ.q.trim();
+    const hits = [];
+    for (let i = S.log.length - 1; i >= 0 && hits.length < 300; i--) {
+      const e = S.log[i];
+      if (nbQ.who && speaker(e) !== nbQ.who) continue;
+      if (nbQ.place && e.c + '|' + e.l !== nbQ.place) continue;
+      if (nbQ.ch && e.c !== nbQ.ch) continue;
+      if (nbQ.pin && !e.pin) continue;
+      if (q && !e.t.includes(q)) continue;
+      hits.push(e);
+    }
+    list.innerHTML = hits.length ? `<div class="cnt">${hits.length}件（新しい順）</div>` : '<p class="nb-empty">見つかりませんでした。</p>';
+    hits.forEach(e => list.appendChild(entryEl(e, () => { e.pin = !e.pin; autosave(); draw(); })));
+  };
+  const s = bar.querySelector('input[type=search]');
+  s.oninput = () => { nbQ.q = s.value; draw(); };
+  bar.querySelectorAll('select').forEach(x => x.onchange = () => { nbQ[x.dataset.k] = x.value; draw(); });
+  bar.querySelector('.pinonly').onchange = e => { nbQ.pin = e.target.checked; draw(); };
+  draw();
+}
+function nbItems(body) {
+  body.innerHTML = S.items.length ? S.items.map(i => `<div class="nb-entry"><div class="txt">${esc(D.items[i])}</div></div>`).join('') : '<p class="nb-empty">まだ何も持っていない。</p>';
+}
+function nbMemo(body) {
+  body.innerHTML = '<p class="nb-note">自分用のメモです。ゲームの進み方には関係しません。</p><textarea id="memo" placeholder="気づいたことを書いておこう"></textarea>';
+  const t = body.querySelector('textarea'); t.value = S.memo || '';
+  let timer; t.oninput = () => { S.memo = t.value; clearTimeout(timer); timer = setTimeout(autosave, 400); };
+}
+function nbStory(body) {
+  const ids = Object.keys(D.chapters), upto = ids.indexOf(S.chapter);
+  const parts = ids.slice(0, upto + 1).map(id => D.chapters[id]).filter(C => C.recap);
+  body.innerHTML = parts.length ? parts.map(C => `<div class="nb-entry"><div class="meta">${esc((C.label || '') + ' ' + (C.title || ''))}</div><div class="txt">${esc(C.recap)}</div></div>`).join('') : '<p class="nb-empty">まだ記録はありません。</p>';
+}
+// 章のはじめと「つづきから」で、その章の「これまでの話」を出す
+function showRecap() {
+  const C = ch();
+  closeModal();
+  const m = document.createElement('div'); m.id = 'modal';
+  m.innerHTML = `<div class="sheet"><div class="eyebrow">これまでの話</div><h3>${esc((C.label || '') + ' ' + (C.title || ''))}</h3><p class="recap">${esc(C.recap)}</p></div>`;
+  const b = document.createElement('button'); b.className = 'big primary'; b.textContent = 'つづける'; b.style.width = '100%';
+  b.onclick = closeModal; m.firstChild.appendChild(b);
+  document.body.appendChild(m);
+}
 
 // ---------- 起動時の一括読み込み ----------
 // 背景をすべて先に読み込んでおき、遊んでいる間は通信しないようにする。
@@ -392,7 +516,7 @@ function preload() {
 const preloaded = [];
 
 document.title = D.title;
-window.__mg = { get state() { return S; }, cond, D };
+window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();

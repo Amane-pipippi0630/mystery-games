@@ -92,6 +92,32 @@ def no_network_while_playing(b):
     return pg.errs
 
 
+def move_options(pg):
+    click(pg, "いどう")
+    opts = pg.locator("#cmd button").all_inner_texts()
+    click(pg, "もどる")
+    return opts
+
+
+@test
+def unlock_once(b):
+    """片桐法律事務所は汐見水産で知るまで行けず、「行けるようになった」は1回だけ出る"""
+    pg = new_shiomi(b)
+    click(pg, "しらべる", "薬瓶"); click(pg, "いどう", "居間"); click(pg, "みせる", "カプセル", "ハル")
+    opts = move_options(pg)
+    assert "汐見病院・薬局" in opts and "片桐法律事務所" not in opts, opts
+    click(pg, "しらべる", "写真立て")  # 何も開かない行動
+    click(pg, "いどう", "汐見水産")
+    for _ in range(5):
+        click(pg, "きく", "秘書の野村")
+    click(pg, "しらべる", "社長室")
+    assert "片桐法律事務所" in move_options(pg)
+    log = pg.evaluate("window.__mg.toastLog")
+    assert log.count("片桐法律事務所に行けるようになった") == 1, log
+    assert log.count("汐見病院・薬局に行けるようになった") == 1, log
+    return pg.errs
+
+
 @test
 def shiomi_wrong_and_missing(b):
     """証拠が足りないときは逮捕できず、まちがえるとミスが数えられる"""
@@ -139,12 +165,45 @@ def chapters(b):
     click(pg, "しらべる", "箱"); click(pg, "つぎへ")
     assert "第二章" in pg.locator("#card").inner_text()
     pg.click("#card")
+    assert "箱から鍵" in pg.locator("#modal .recap").inner_text()  # これまでの話
+    pg.click("#modal >> text=つづける")
     assert state(pg)["chapter"] == "ch2"
     assert pg.evaluate("!!localStorage.getItem('mg:test-mini:chap:ch2')")
     click(pg, "すいり", "A")
     assert state(pg)["v"]["miss"] == 1
     click(pg, "すいり", "X"); click(pg, "つぎへ")
     assert "完 OK" in msg(pg)
+    return pg.errs
+
+
+@test
+def notebook(b):
+    """捜査手帳：証言カード、ピン留め、会話ログの絞り込みと検索、メモ"""
+    pg = new_shiomi(b)
+    click(pg, "きく", "マコト")
+    click(pg, "いどう", "居間"); click(pg, "きく", "ハル"); click(pg, "きく", "ハル"); click(pg, "きく", "沙織")
+    st = state(pg)
+    assert len(st["cards"]) == 3, st["cards"]
+    assert pg.locator("#nbn").inner_text() == "3"
+    pg.click("#nb")
+    assert pg.locator("#nbook .nb-entry").count() == 3
+    assert pg.locator("#nbn").inner_text() == ""  # 見たらバッジが消える
+    pg.locator("#nbook .nb-entry .pin").first.click()
+    assert state(pg)["cards"][0]["pin"] is True
+    pg.click("#nbook .nb-tabs >> text=会話ログ")
+    pg.select_option("#nbook select[data-k=who]", "ハル")
+    assert pg.locator("#nbook .nb-entry").count() == 2
+    pg.select_option("#nbook select[data-k=who]", "")
+    pg.fill("#nbook input[type=search]", "書斎")
+    n = pg.locator("#nbook .nb-entry").count()
+    assert n >= 1 and all("書斎" in t for t in pg.locator("#nbook .nb-entry .txt").all_inner_texts())
+    pg.click("#nbook .nb-tabs >> text=メモ")
+    pg.fill("#memo", "Kは誰？")
+    pg.wait_for_timeout(600)
+    pg.click("#nbook .nb-x")
+    pg.reload(); pg.click("text=つづきから")
+    assert state(pg)["memo"] == "Kは誰？"
+    assert state(pg)["cards"][0]["pin"] is True
     return pg.errs
 
 
