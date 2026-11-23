@@ -10,6 +10,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 SHIOMI = (ROOT / "games/shiomi-port/index.html").as_uri()
 MINI = (ROOT / "tests/fixtures/mini/index.html").as_uri()
+HUB = (ROOT / "index.html").as_uri()
 results = []
 
 
@@ -263,6 +264,48 @@ def notebook(b):
     pg.reload(); pg.click("text=つづきから")
     assert state(pg)["memo"] == "Kは誰？"
     assert state(pg)["cards"][0]["pin"] is True
+    return pg.errs
+
+
+def hub_page(b):
+    ctx = b.new_context(viewport={"width": 390, "height": 844})
+    pg = ctx.new_page(); pg.errs = []
+    pg.on("pageerror", lambda e: pg.errs.append(str(e)))
+    pg.goto(HUB)
+    return pg
+
+
+@test
+def hub(b):
+    """作品選択：遊べる作品へ移動して戻れる。クリアで⭐️、続きがあれば「つづきあり」"""
+    pg = hub_page(b)
+    assert pg.locator(".game").count() == 4
+    assert pg.locator(".game[data-id=epilogue]").count() == 0
+    assert pg.locator(".game.soon").count() == 3
+    pg.click(".game[data-id=shiomi-port]")
+    pg.wait_for_selector("#title:not(.hide)")
+    pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "いどう", "居間")
+    pg.click("#menu"); pg.click("#modal .row:has-text('タイトルへ')")
+    pg.click("text=作品選択へ")
+    pg.wait_for_selector(".game")
+    assert "つづきあり" in pg.locator(".game[data-id=shiomi-port]").inner_text()
+    assert pg.locator(".game[data-id=shiomi-port] .clear").count() == 0
+    pg.evaluate("localStorage.setItem('mg:cleared', JSON.stringify(['shiomi-port']))"); pg.reload()
+    assert pg.locator(".game[data-id=shiomi-port] .clear").count() == 1
+    assert "1 / 4" in pg.locator(".stat").inner_text()
+    return pg.errs
+
+
+@test
+def hub_epilogue(b):
+    """三部作を1つクリアすると隠しエピローグが「？？？」で見え、全部クリアで開く"""
+    pg = hub_page(b)
+    pg.evaluate("localStorage.setItem('mg:cleared', JSON.stringify(['kamomejima']))"); pg.reload()
+    e = pg.locator(".game[data-id=epilogue]")
+    assert e.count() == 1 and "locked" in e.get_attribute("class") and "1/3" in e.inner_text()
+    pg.evaluate("localStorage.setItem('mg:cleared', JSON.stringify(['kamomejima','furiko','fuyu-shiomi']))"); pg.reload()
+    e = pg.locator(".game[data-id=epilogue]")
+    assert "locked" not in e.get_attribute("class") and "最後のページ" in e.inner_text()
     return pg.errs
 
 

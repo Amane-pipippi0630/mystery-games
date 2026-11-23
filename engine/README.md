@@ -46,6 +46,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 |---|---|
 | `id` | ゲームのid。セーブの保存先とクリア記録に使う |
 | `title` | ページのタイトル |
+| `hub` | 作品選択ページへの相対パス（例：`../../index.html`）。あるとタイトル画面に「作品選択へ」が出る |
 | `start` | 最初の章のid |
 | `chapters` | 章のidを順番に並べた配列。`src/<id>.json` を読む |
 | `titleScreen` | `eyebrow`・`title`（`<br>` 可）・`lead` |

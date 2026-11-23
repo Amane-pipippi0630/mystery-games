@@ -1,0 +1,32 @@
+{
+  "title": "汐見ミステリー",
+  "eyebrow": "MYSTERY ADVENTURE SERIES",
+  "lead": "港町・汐見と、1冊の古い手帳をめぐる推理アドベンチャー。",
+  "order": "おすすめの順番は 第一作 → 第二作 → 第三作。どれから遊んでも、その作品だけで事件は解けます。",
+  "games": [
+    {
+      "id": "kamomejima", "tag": "第一作", "title": "鴎島館の論理（仮）", "era": "2026年夏",
+      "lead": "嵐で孤立した島の洋館。閂のかかった書庫で、弁護士が死んでいた。",
+      "thumb": "games/kamomejima/src/bg/island.jpg", "path": "games/kamomejima/index.html", "status": "soon", "trilogy": true
+    },
+    {
+      "id": "furiko", "tag": "第二作", "title": "振り子の止まる夜（仮）", "era": "2027年冬",
+      "lead": "下町の川沿いに停められた車の中で、男が冷たくなっていた。",
+      "thumb": null, "path": "games/furiko/index.html", "status": "soon", "trilogy": true
+    },
+    {
+      "id": "fuyu-shiomi", "tag": "第三作", "title": "冬の汐見（仮）", "era": "1959年冬",
+      "lead": "品川の安宿で見つかった身元不明の男。手がかりは、汐見行きの切符の半券。",
+      "thumb": null, "path": "games/fuyu-shiomi/index.html", "status": "soon", "trilogy": true
+    },
+    {
+      "id": "shiomi-port", "tag": "番外編", "title": "汐見港殺人事件", "era": "2025年秋",
+      "lead": "鍵のかかった書斎で、水産会社の社長が死んでいた。30分ほどで遊べる短編。",
+      "thumb": "games/shiomi-port/src/bg/study.jpg", "path": "games/shiomi-port/index.html", "status": "play"
+    }
+  ],
+  "epilogue": {
+    "id": "epilogue", "title": "最後のページ", "lead": "3作すべてを解いた人へ。",
+    "path": "games/epilogue/index.html", "status": "soon"
+  }
+}

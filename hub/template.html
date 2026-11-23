@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1117;--panel:#171b24;--panel2:#1f2430;--line:#2b3140;--text:#e8e6e1;--sub:#9aa1ae;--accent:#d9a441;--accent2:#c2553f;--blue:#7fa7d6}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100%}
+body{background:radial-gradient(ellipse at 50% 0%,#24304a 0%,var(--bg) 60%) no-repeat;display:flex;justify-content:center}
+#wrap{width:100%;max-width:560px;padding:34px 16px 40px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.35em;text-align:center}
+h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:38px;letter-spacing:.08em;text-align:center;margin:8px 0 10px;text-shadow:0 4px 30px #000}
+.lead{color:var(--sub);font-size:14px;line-height:1.9;text-align:center;text-wrap:balance}
+.stat{display:flex;justify-content:center;gap:10px;margin:18px 0 6px}
+.stat span{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+.order{color:var(--sub);font-size:12.5px;line-height:1.8;text-align:center;margin:6px 0 18px;text-wrap:balance}
+.sec{color:var(--sub);font-size:12px;letter-spacing:.2em;margin:22px 2px 10px}
+.game{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:12px;cursor:pointer;position:relative}
+.game:hover{border-color:var(--accent)}
+.game .img{aspect-ratio:16/7;background:linear-gradient(135deg,#2a3348,#151a24);background-size:cover;background-position:center;position:relative}
+.game .img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,#171b24 100%)}
+.game .body{padding:2px 16px 15px;position:relative}
+.game .tag{display:inline-block;color:#1a1405;background:var(--accent);font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;margin-right:6px}
+.game .era{color:var(--sub);font-size:12px}
+.game h2{font-family:'Shippori Mincho',serif;font-weight:800;font-size:22px;margin:6px 0 4px}
+.game p{color:var(--sub);font-size:13.5px;line-height:1.8}
+.game .badges{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:1}
+.game .badges span{background:#0e1117cc;backdrop-filter:blur(6px);border:1px solid #ffffff2a;border-radius:999px;padding:4px 10px;font-size:12px}
+.game .badges .clear{border-color:var(--accent);color:var(--accent);font-weight:700}
+.game.soon{cursor:default}
+.game.soon .img{filter:grayscale(.6) brightness(.7)}
+.game.soon .badges .wait{color:var(--sub)}
+.game.locked .img{filter:blur(6px) brightness(.4)}
+.game.locked h2{letter-spacing:.3em}
+.game.epi{border-color:var(--accent)}
+#toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-20px);opacity:0;background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;transition:.3s;z-index:9;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+footer{color:#5c6370;font-size:11px;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="wrap"></div>
+<script type="application/json" id="hub-data">{{DATA}}</script>
+<script>
+'use strict';
+(() => {
+const H = JSON.parse(document.getElementById('hub-data').textContent);
+const get = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+const cleared = get('mg:cleared') || [];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+let toastT;
+const toast = t => { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); };
+
+const trilogy = H.games.filter(g => g.trilogy);
+const triDone = trilogy.filter(g => cleared.includes(g.id)).length;
+const allDone = triDone === trilogy.length;
+
+function card(g, opt = {}) {
+  const b = document.createElement('button');
+  const done = cleared.includes(g.id);
+  const auto = get('mg:' + g.id + ':auto');
+  const cont = auto && auto.state && !auto.state.done;
+  const soon = g.status !== 'play';
+  b.className = 'game' + (soon ? ' soon' : '') + (opt.locked ? ' locked' : '') + (opt.epi ? ' epi' : '');
+  b.dataset.id = g.id;
+  const badges = [done ? '<span class="clear">⭐️ クリア</span>' : '', cont ? '<span>つづきあり</span>' : '', soon && !opt.locked ? '<span class="wait">準備中</span>' : ''].join('');
+  b.innerHTML = `<div class="img" style="${g.thumbUrl ? `background-image:url('${g.thumbUrl}')` : ''}"></div>
+    <div class="badges">${badges}</div>
+    <div class="body">${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="era">${esc(g.era || '')}</span>
+    <h2>${esc(opt.locked ? '？？？' : g.title)}</h2><p>${esc(opt.locked ? `三部作をすべてクリアすると開きます（${triDone}/${trilogy.length}）` : g.lead)}</p></div>`;
+  b.onclick = () => {
+    if (opt.locked) return toast('三部作をすべてクリアすると開きます');
+    if (soon) return toast('ただいま準備中です');
+    location.href = g.path;
+  };
+  return b;
+}
+
+const w = document.getElementById('wrap');
+w.innerHTML = `<div class="eyebrow">${esc(H.eyebrow)}</div><h1>${esc(H.title)}</h1><p class="lead">${esc(H.lead)}</p>
+  <div class="stat"><span>⭐️ クリア ${H.games.filter(g => cleared.includes(g.id)).length} / ${H.games.length}</span></div>
+  <p class="order">${esc(H.order)}</p><div class="sec">三部作</div>`;
+trilogy.forEach(g => w.appendChild(card(g)));
+if (triDone > 0) w.appendChild(card(H.epilogue, { locked: !allDone, epi: true }));
+const others = H.games.filter(g => !g.trilogy);
+if (others.length) {
+  w.insertAdjacentHTML('beforeend', '<div class="sec">ほかの事件</div>');
+  others.forEach(g => w.appendChild(card(g)));
+}
+w.insertAdjacentHTML('beforeend', '<footer>進み具合とクリアの記録は、このブラウザに保存されます。</footer>');
+// サムネイルを先に読み込んでおく
+H.games.forEach(g => { if (g.thumbUrl) new Image().src = g.thumbUrl; });
+})();
+</script>
+</body>
+</html>

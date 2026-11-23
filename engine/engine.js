@@ -385,6 +385,7 @@ function toTitle() {
   add('はじめから', newGame, 'primary');
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
+  if (D.hub) add('作品選択へ', () => { location.href = D.hub; });
   t.classList.remove('hide');
 }
 function newGame() {
