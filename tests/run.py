@@ -355,46 +355,54 @@ def hub_epilogue(b):
     return pg.errs
 
 
+def ask(pg, who, topic="いまのこと", n=1):
+    for _ in range(n):
+        click(pg, "聞く", who, topic)
+
+
 @test
 def kamomejima_ch1(b):
-    """鴎島館 第1章：港から停電まで通して遊べ、クリアの記録は付かない"""
+    """鴎島館 第1章：話題を選んで聞き、取材ノートが5件たまると宴、港から停電まで通して遊べる"""
     pg = page(b, KAMO)
     pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
-    for _ in range(3):
-        click(pg, "聞く", "三島")
+    ask(pg, "鷹宮", "相談する")
+    assert "三島さん、まだ何か話してくれそう" in msg(pg)  # 聞き残しがあれば先に教える
+    ask(pg, "三島", n=3); ask(pg, "三島", "創業者のこと", 3)
+    assert len(state(pg)["notes"]) == 3
     click(pg, "移動", "連絡船の上"); click(pg, "調べる", "鴎島")
-    click(pg, "移動", "久我館・正面"); click(pg, "聞く", "磯村")
+    click(pg, "移動", "久我館・正面"); ask(pg, "磯村")
+    ask(pg, "鷹宮", "相談する")
+    assert "磯村さん、まだ何か話してくれそう" in msg(pg)  # 聞き残しの案内は1人1回
+    ask(pg, "鷹宮", "相談する")
+    m0 = msg(pg); assert "雨が降ってきた" in m0, m0  # その次はぼかしたヒント
+    ask(pg, "鷹宮", "相談する", 2)
+    assert "『移動』で玄関ホールへ" in msg(pg)       # 3回目ではっきり
     click(pg, "移動", "玄関ホール")
-    for _ in range(3):
-        click(pg, "聞く", "磯村")
-    for _ in range(3):
-        click(pg, "聞く", "沙耶")
+    ask(pg, "磯村", n=3); ask(pg, "磯村", "創業者のこと", 2); ask(pg, "沙耶", n=3)
     click(pg, "調べる", "肖像画の銘板")
     click(pg, "移動", "客室"); click(pg, "調べる", "旅行かばん")
     click(pg, "移動", "談話室")
     for p in ["康彦", "圭", "玲子"]:
-        click(pg, "聞く", p)
-    assert state(pg)["f"].get("dinner_called"), state(pg)["f"]
+        ask(pg, p)
+    assert state(pg)["f"].get("dinner_called"), (state(pg)["f"], state(pg)["notes"])
     click(pg, "つぎへ"); click(pg, "つぎへ")
     click(pg, "移動", "大食堂")
     for _ in range(11):
         click(pg, "つぎへ")
     assert state(pg)["f"].get("dinner_done")
-    click(pg, "聞く", "タキ"); click(pg, "聞く", "浅見"); click(pg, "聞く", "浅見")
-    click(pg, "聞く", "磯村"); click(pg, "聞く", "磯村")
-    click(pg, "移動", "玄関ホール"); click(pg, "聞く", "沙耶")
-    click(pg, "移動", "談話室"); click(pg, "聞く", "康彦"); click(pg, "聞く", "玲子")
-    click(pg, "聞く", "三島"); click(pg, "聞く", "三島")
-    assert state(pg)["f"].get("blackout_ready")
-    click(pg, "聞く", "鷹宮")
+    ask(pg, "タキ"); ask(pg, "浅見", n=2); ask(pg, "磯村", n=2)
+    click(pg, "移動", "玄関ホール"); ask(pg, "沙耶")
+    click(pg, "移動", "談話室"); ask(pg, "康彦"); ask(pg, "玲子"); ask(pg, "三島", n=2)
+    assert state(pg)["f"].get("blackout_ready"), state(pg)["f"]
+    ask(pg, "鷹宮", "ミステリー談義")
     for _ in range(10):
         click(pg, "つぎへ")
     for _ in range(3):
         click(pg, "つぎへ")
     m = msg(pg)
-    assert "第1章 おわり" in m and "プレイ時間" in m, m
+    assert "第1章 おわり" in m and "取材ノート：5件" in m and "相談：5回" in m, m
     assert not pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')").count("kamomejima")
-    assert len(state(pg)["cards"]) >= 15, len(state(pg)["cards"])
+    click(pg, "タイトルへ")
     return pg.errs
 
 

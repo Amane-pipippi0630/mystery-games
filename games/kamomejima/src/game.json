@@ -61,7 +61,7 @@
   },
   "resumeText": "続きから始めよう。",
   "assistant": "takamiya",
-  "assistantHint": "鷹宮「葛西、{name}さんはまだ話し足りへんみたいやで。もうちょっと聞いとこ」",
+  "assistantHint": "鷹宮「{name}さん、まだ何か話してくれそうやで。いろんな話題で聞いてみ」",
   "talkDefault": "{name}は、いまは話す気がなさそうだ。",
   "items": {},
   "people": {
@@ -110,8 +110,21 @@
           "label": ""
         }
       ],
-      "result": "～ 第1章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n\nこの章は試作です。遊んだ時間と、長すぎた・短すぎたところを教えてください。",
+      "result": "～ 第1章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件\n\nこの章は試作です。遊んだ時間と、長すぎた・短すぎたところを教えてください。",
       "clear": false
     }
+  },
+  "topics": {
+    "ima": "いまのこと",
+    "kuga": "創業者のこと",
+    "hito": "一族のこと",
+    "yakata": "館と島のこと",
+    "hint": "相談する",
+    "dangi": "ミステリー談義"
+  },
+  "hintTopic": "hint",
+  "notes": {
+    "tab": "取材ノート",
+    "lead": "創業者・久我誠一郎の伝記のために集めた話"
   }
 }
