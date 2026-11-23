@@ -1,0 +1,10 @@
+{
+  "id": "test-mini",
+  "title": "テスト用ミニゲーム",
+  "start": "ch1",
+  "chapters": ["ch1", "ch2"],
+  "titleScreen": {"title": "テスト"},
+  "items": {"key": "鍵"},
+  "people": {"a": {"name": "助手A", "short": "A"}, "x": {"name": "犯人X", "short": "X"}},
+  "endings": {"end": {"pages": ["解決した。"], "ranks": [{"label": "OK"}], "result": "完 {rank}"}}
+}

@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""ゲームを1枚のHTMLに組み立てる。
+
+使い方:
+  python3 tools/build.py shiomi-port          # games/shiomi-port/index.html を作る
+  python3 tools/build.py shiomi-port --check  # シナリオの点検だけする
+  python3 tools/build.py tests/fixtures/mini  # フォルダを直接指定してもよい
+
+games/<id>/src/ に game.json・章ごとの <章id>.json・bg/<名前>.jpg を置く。
+エンジン（engine/）・シナリオ・背景画像をすべて1枚に埋め込むので、
+できたHTMLは開くだけで遊べ、最初の読み込みのあとは通信しない。
+"""
+import base64, json, re, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
+TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
+EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter"}
+
+
+class Checker:
+    def __init__(self, game):
+        self.g = game
+        self.errors = []
+        self.warnings = []
+
+    def err(self, where, msg): self.errors.append(f"{where}: {msg}")
+    def warn(self, where, msg): self.warnings.append(f"{where}: {msg}")
+
+    def cond(self, where, src, ch):
+        if not src:
+            return
+        pos, depth = 0, 0
+        while pos < len(src):
+            m = TOK.match(src, pos)
+            if not m:
+                if src[pos:].strip():
+                    self.err(where, f"条件の書き方が正しくありません: {src}")
+                return
+            t = m.group(1); pos = m.end()
+            if t == "(": depth += 1
+            elif t == ")": depth -= 1
+            elif t not in ("||", "&&", "!", "true", "false"):
+                k, n = TERM.match(t).group(1, 2)
+                if k == "has" and n not in self.g["items"]:
+                    self.err(where, f"アイテム {n} は items にありません")
+                elif k == "here" and n not in ch["locations"]:
+                    self.err(where, f"場所 {n} はありません")
+                elif k == "talked" and n not in self.g["people"]:
+                    self.err(where, f"人物 {n} は people にありません")
+                elif k not in ("has", "flag", "here", "var", "talked"):
+                    self.err(where, f"不明な条件 {k}:")
+        if depth:
+            self.err(where, f"かっこの数が合いません: {src}")
+
+    def effects(self, where, lst, ch):
+        for e in lst or []:
+            k, _, a = e.partition(":")
+            if k not in EFFECTS:
+                self.err(where, f"不明な効果: {e}")
+            elif k in ("give", "take") and a not in self.g["items"]:
+                self.err(where, f"アイテム {a} は items にありません")
+            elif k == "goto" and a not in ch["locations"]:
+                self.err(where, f"場所 {a} はありません")
+            elif k == "puzzle" and a not in ch.get("puzzles", {}):
+                self.err(where, f"謎解き {a} はありません")
+            elif k == "ending" and a not in self.g.get("endings", {}):
+                self.err(where, f"エンディング {a} はありません")
+            elif k == "chapter" and a not in self.g["chapters"]:
+                self.err(where, f"章 {a} はありません")
+            elif k == "set" and not re.match(r"^[A-Za-z0-9_\-]+=-?\d+$", a):
+                self.err(where, f"set は set:名前=数 の形で書きます: {e}")
+
+    def entry(self, where, e, ch):
+        if e is None:
+            return
+        if isinstance(e, str):
+            return
+        if isinstance(e, list):
+            for i, r in enumerate(e):
+                self.rule(f"{where}[{i}]", r, ch)
+            if e and e[-1].get("if"):
+                self.warn(where, "最後のルールに条件があります（どれにも当てはまらないと既定の文になります）")
+        elif "seq" in e:
+            for i, r in enumerate(e["seq"]):
+                self.rule(f"{where}.seq[{i}]", r, ch)
+        else:
+            self.rule(where, e, ch)
+
+    def rule(self, where, r, ch):
+        if isinstance(r, str):
+            return
+        self.cond(where, r.get("if"), ch)
+        self.effects(where, r.get("do"), ch)
+        if not r.get("text") and not r.get("do"):
+            self.err(where, "text も do もありません")
+
+
+def gamedir(arg):
+    p = Path(arg)
+    return p.resolve() if (p / "src").exists() else ROOT / "games" / arg
+
+
+def load(gid):
+    src = gamedir(gid) / "src"
+    g = json.loads((src / "game.json").read_text(encoding="utf-8"))
+    order = g["chapters"]
+    g["chapters"] = {}
+    for cid in order:
+        c = json.loads((src / f"{cid}.json").read_text(encoding="utf-8"))
+        if c.get("id") != cid:
+            raise SystemExit(f"{cid}.json の id が {c.get('id')} になっています")
+        g["chapters"][cid] = c
+    bgdir = src / "bg"
+    g["assets"] = {"bg": {}}
+    if bgdir.exists():
+        for f in sorted(bgdir.iterdir()):
+            mime = {".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png", ".webp": "webp"}.get(f.suffix.lower())
+            if mime:
+                g["assets"]["bg"][f.stem] = f"data:image/{mime};base64," + base64.b64encode(f.read_bytes()).decode()
+    return g
+
+
+def check(g):
+    c = Checker(g)
+    if g["start"] not in g["chapters"]:
+        c.err("game", f"start の章 {g['start']} がありません")
+    bgs = g["assets"]["bg"]
+    for eid, e in g.get("endings", {}).items():
+        for k in ("bg", "finalBg"):
+            if e.get(k) and e[k] not in bgs:
+                c.err(f"endings.{eid}", f"背景 {e[k]} が src/bg にありません")
+        for i, r in enumerate(e.get("ranks", [])):
+            c.cond(f"endings.{eid}.ranks[{i}]", r.get("if"), {"locations": {}})
+    for cid, ch in g["chapters"].items():
+        w = cid
+        if ch["start"]["loc"] not in ch["locations"]:
+            c.err(w, f"開始場所 {ch['start']['loc']} がありません")
+        looks = ch.get("look", {})
+        for lid, L in ch["locations"].items():
+            if L.get("bg") and L["bg"] not in bgs:
+                c.err(f"{w}.{lid}", f"背景 {L['bg']} が src/bg にありません")
+            c.cond(f"{w}.{lid}.unlock", L.get("unlock"), ch)
+            for p in L.get("people", []):
+                if p not in g["people"]:
+                    c.err(f"{w}.{lid}", f"人物 {p} は people にありません")
+                elif p not in ch.get("talk", {}):
+                    c.warn(f"{w}.{lid}", f"{p} の会話（talk）がありません")
+            for o in L.get("objs", {}):
+                if o not in looks:
+                    c.warn(f"{w}.{lid}", f"{o} を調べたときの文（look）がありません")
+            c.entry(f"{w}.{lid}.arrive", L.get("arrive"), ch)
+        for i, r in enumerate(ch.get("onMove", [])):
+            c.rule(f"{w}.onMove[{i}]", r, ch)
+        for p, e in ch.get("talk", {}).items():
+            if p not in g["people"]:
+                c.err(f"{w}.talk", f"人物 {p} は people にありません")
+            c.entry(f"{w}.talk.{p}", e, ch)
+        for p, m in ch.get("show", {}).items():
+            for it, e in m.items():
+                if it not in g["items"]:
+                    c.err(f"{w}.show.{p}", f"アイテム {it} は items にありません")
+                c.entry(f"{w}.show.{p}.{it}", e, ch)
+        for o, e in looks.items():
+            c.entry(f"{w}.look.{o}", e, ch)
+        for pid, P in ch.get("puzzles", {}).items():
+            if len(P["answer"]) != P["length"]:
+                c.err(f"{w}.puzzles.{pid}", "answer の長さが length と合いません")
+            c.rule(f"{w}.puzzles.{pid}.success", P["success"], ch)
+        A = ch.get("accuse")
+        if A:
+            for p in A["suspects"]:
+                if p not in g["people"]:
+                    c.err(f"{w}.accuse", f"人物 {p} は people にありません")
+            if A["culprit"] not in A["suspects"]:
+                c.err(f"{w}.accuse", "culprit が suspects に入っていません")
+            if A["ending"] not in g.get("endings", {}):
+                c.err(f"{w}.accuse", f"エンディング {A['ending']} はありません")
+            for i, r in enumerate(A.get("required", [])):
+                c.cond(f"{w}.accuse.required[{i}]", r["if"], ch)
+            for p, e in A.get("wrong", {}).items():
+                c.entry(f"{w}.accuse.wrong.{p}", e, ch)
+    return c
+
+
+def build(gid, only_check=False):
+    g = load(gid)
+    c = check(g)
+    for x in c.warnings:
+        print("注意:", x)
+    for x in c.errors:
+        print("エラー:", x)
+    if c.errors:
+        raise SystemExit(f"{len(c.errors)}件のエラーがあります")
+    if only_check:
+        print("点検OK")
+        return
+    eng = ROOT / "engine"
+    data = json.dumps(g, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    html = (eng / "template.html").read_text(encoding="utf-8")
+    html = (html.replace("{{TITLE}}", g["title"])
+                .replace("{{CSS}}", (eng / "engine.css").read_text(encoding="utf-8"))
+                .replace("{{JS}}", (eng / "engine.js").read_text(encoding="utf-8"))
+                .replace("{{DATA}}", data))
+    out = gamedir(gid) / "index.html"
+    out.write_text(html, encoding="utf-8")
+    print(f"できあがり: {out}（{out.stat().st_size // 1024} KB）")
+
+
+if __name__ == "__main__":
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if not args:
+        raise SystemExit(__doc__)
+    build(args[0], "--check" in sys.argv)
