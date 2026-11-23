@@ -21,7 +21,7 @@ BG_QUALITY = 80      # WebPの画質
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
 TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
-EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter"}
+EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card"}
 
 
 class Checker:
@@ -74,6 +74,10 @@ class Checker:
                 self.err(where, f"エンディング {a} はありません")
             elif k == "chapter" and a not in self.g["chapters"]:
                 self.err(where, f"章 {a} はありません")
+            elif k == "event" and a not in ch.get("events", {}):
+                self.err(where, f"イベント {a} はありません")
+            elif k == "card" and ":" not in a:
+                self.err(where, f"card は card:人物id:文 の形で書きます（人物なしは card::文）: {e}")
             elif k == "set" and not re.match(r"^[A-Za-z0-9_\-]+=-?\d+$", a):
                 self.err(where, f"set は set:名前=数 の形で書きます: {e}")
 
@@ -160,6 +164,9 @@ def check(g):
                 c.err(f"{w}.{lid}", f"背景 {L['bg']} が src/bg にありません")
             c.cond(f"{w}.{lid}.unlock", L.get("unlock"), ch)
             for p in L.get("people", []):
+                if isinstance(p, dict):
+                    c.cond(f"{w}.{lid}.people", p.get("if"), ch)
+                    p = p["id"]
                 if p not in g["people"]:
                     c.err(f"{w}.{lid}", f"人物 {p} は people にありません")
                 elif p not in ch.get("talk", {}):
@@ -168,6 +175,14 @@ def check(g):
                 if o not in looks:
                     c.warn(f"{w}.{lid}", f"{o} を調べたときの文（look）がありません")
             c.entry(f"{w}.{lid}.arrive", L.get("arrive"), ch)
+        for eid, E in ch.get("events", {}).items():
+            if E.get("bg") and E["bg"] not in bgs:
+                c.err(f"{w}.events.{eid}", f"背景 {E['bg']} が src/bg にありません")
+            c.effects(f"{w}.events.{eid}", E.get("do"), ch)
+        for i, r in enumerate(ch.get("triggers", [])):
+            c.rule(f"{w}.triggers[{i}]", r, ch)
+            if not any(e.startswith("flag:") for e in r.get("do", [])):
+                c.warn(f"{w}.triggers[{i}]", "do に flag がないと、同じトリガーが何度も動きます")
         for i, r in enumerate(ch.get("onMove", [])):
             c.rule(f"{w}.onMove[{i}]", r, ch)
         for p, e in ch.get("talk", {}).items():
