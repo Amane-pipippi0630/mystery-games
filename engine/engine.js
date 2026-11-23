@@ -134,13 +134,7 @@ function renderScene() {
   const L = loc();
   updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
-  renderPeople();
-}
-
-function renderPeople(heard) {
-  if (!S || !loc()) return;
-  heard = heard || heardSet();
-  $('here').innerHTML = (loc().people || []).map(p => `<span class="${hasNewTalk(p, heard) ? 'new' : ''}">${person(p).name}</span>`).join('');
+  $('here').innerHTML = (L.people || []).map(p => `<span>${person(p).name}</span>`).join('');
 }
 
 const IC = {
@@ -168,10 +162,7 @@ function showItems() { say(S.items.length ? 'もちもの：\n' + S.items.map(i 
 // ---------- 行動 ----------
 function main() {
   if (S.done) return;
-  const heard = heardSet();
-  const anyNew = (loc().people || []).some(p => hasNewTalk(p, heard));
-  const cmds = [['いどう', moveMenu], ['きく', askMenu, anyNew ? 'new' : ''], ['しらべる', lookMenu], ['みせる', showMenu]];
-  renderPeople(heard);
+  const cmds = [['いどう', moveMenu], ['きく', askMenu], ['しらべる', lookMenu], ['みせる', showMenu]];
   if (ch().accuse) cmds.push(['すいり', accuseMenu]);
   cmds.push(['もちもの', showItems]);
   btns(cmds);
@@ -221,7 +212,7 @@ function moveTo(id) {
   if (r) { run(r.do); say(r.text); }
   after();
 }
-// まだ聞いていない話があるか（次に返ってくる文が、まだ一度も表示されていなければ「ある」）
+// まだ聞いていない大事な話があるか（次に返ってくる文が証言カードになるもので、まだ一度も表示されていなければ「ある」）
 function peekTalk(p) {
   const e = (ch().talk || {})[p];
   if (e == null) return null;
@@ -232,15 +223,20 @@ function peekTalk(p) {
 }
 function hasNewTalk(p, heard) {
   const r = peekTalk(p);
-  return !!(r && r.text && !heard.has(r.text));
+  return !!(r && r.text && r.card && !heard.has(r.text));
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
-function askMenu() {
+function askMenu() { btns([...(loc().people || []).map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
+// 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
+function assistantHint() {
   const heard = heardSet();
-  btns([...(loc().people || []).map(p => [person(p).name, () => talk(p), hasNewTalk(p, heard) ? 'new' : '']), back], 'だれに聞く？（● まだ聞いていない話がある）');
+  const q = (loc().people || []).find(p => p !== D.assistant && hasNewTalk(p, heard));
+  return q ? { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) } : null;
 }
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
+  const hint = p === D.assistant ? assistantHint() : null;
+  if (hint) { S.seq[key] = (S.seq[key] || 0) + 1; return act(hint, { p }); }
   const r = resolve(e, key);
   if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });

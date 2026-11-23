@@ -157,21 +157,23 @@ def contradiction(b):
 
 
 @test
-def new_talk_marks(b):
-    """まだ聞いていない話がある人に印が付き、聞き終わると消える"""
+def assistant_points_to_unheard(b):
+    """マコトに聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる"""
     pg = new_shiomi(b)
-    has = lambda sel: pg.locator(sel).count() > 0
-    assert has("#cmd button.new:has-text('きく')")
-    click(pg, "きく", "マコト")
-    assert not has("#cmd button.new:has-text('きく')")
     click(pg, "いどう", "居間")
-    assert has("#here span.new:has-text('ハル')") and has("#here span.new:has-text('沙織')")
-    for i in range(4):
-        click(pg, "きく")
-        assert has("#cmd button.new:has-text('ハル')"), i
-        click(pg, "ハル")
-    assert not has("#here span.new:has-text('ハル')") and has("#here span.new:has-text('沙織')")
-    click(pg, "きく"); assert not has("#cmd button.new:has-text('ハル')"); click(pg, "もどる")
+    click(pg, "きく", "マコト")
+    m = msg(pg)
+    assert "沙織さんはまだ何か知っていそう" in m, m
+    for _ in range(2):
+        click(pg, "きく", "沙織")
+    click(pg, "きく", "マコト")
+    assert "ハルさんはまだ何か知っていそう" in msg(pg)
+    for _ in range(4):
+        click(pg, "きく", "ハル")
+    click(pg, "きく", "マコト")
+    m = msg(pg)
+    assert "知っていそう" not in m, m  # 残っていなければ、ふだんのヒントに戻る
+    assert pg.locator("#cmd button.new, #here span.new").count() == 0
     return pg.errs
 
 

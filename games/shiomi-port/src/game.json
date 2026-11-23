@@ -2,7 +2,9 @@
   "id": "shiomi-port",
   "title": "汐見港殺人事件",
   "start": "ch1",
-  "chapters": ["ch1"],
+  "chapters": [
+    "ch1"
+  ],
   "titleScreen": {
     "eyebrow": "MYSTERY ADVENTURE",
     "title": "汐見港<br>殺人事件",
@@ -17,12 +19,30 @@
       "自殺か、それとも密室殺人か――。きみは汐見署の<b>警部</b>として、新人刑事の<b>マコト</b>と捜査を始める。"
     ],
     "cast": [
-      ["黒木 沙織", "被害者の娘。昨日、結婚のことで父と喧嘩した"],
-      ["田辺 ハル", "黒木家の家政婦。第一発見者"],
-      ["黒木 隆", "被害者の弟。借金を抱えている"],
-      ["野村", "汐見水産の社長秘書"],
-      ["片桐", "顧問弁護士。被害者の古い友人"],
-      ["大場", "汐見署の鑑識"]
+      [
+        "黒木 沙織",
+        "被害者の娘。昨日、結婚のことで父と喧嘩した"
+      ],
+      [
+        "田辺 ハル",
+        "黒木家の家政婦。第一発見者"
+      ],
+      [
+        "黒木 隆",
+        "被害者の弟。借金を抱えている"
+      ],
+      [
+        "野村",
+        "汐見水産の社長秘書"
+      ],
+      [
+        "片桐",
+        "顧問弁護士。被害者の古い友人"
+      ],
+      [
+        "大場",
+        "汐見署の鑑識"
+      ]
     ],
     "button": "捜査開始"
   },
@@ -34,16 +54,39 @@
     "report": "鑑定書"
   },
   "people": {
-    "makoto": {"name": "マコト"},
-    "saori": {"name": "沙織"},
-    "haru": {"name": "ハル"},
-    "oba": {"name": "鑑識の大場", "short": "大場"},
-    "nomura": {"name": "秘書の野村", "short": "野村"},
-    "master": {"name": "雀荘の店主", "short": "店主"},
-    "takashi": {"name": "隆"},
-    "pharm": {"name": "薬剤師"},
-    "katagiri": {"name": "片桐"}
+    "makoto": {
+      "name": "マコト"
+    },
+    "saori": {
+      "name": "沙織"
+    },
+    "haru": {
+      "name": "ハル"
+    },
+    "oba": {
+      "name": "鑑識の大場",
+      "short": "大場"
+    },
+    "nomura": {
+      "name": "秘書の野村",
+      "short": "野村"
+    },
+    "master": {
+      "name": "雀荘の店主",
+      "short": "店主"
+    },
+    "takashi": {
+      "name": "隆"
+    },
+    "pharm": {
+      "name": "薬剤師"
+    },
+    "katagiri": {
+      "name": "片桐"
+    }
   },
+  "assistant": "makoto",
+  "assistantHint": "マコト「警部、{name}さんはまだ何か知っていそうですよ。もう少し話を聞いてみましょう」",
   "endings": {
     "main": {
       "bg": "law",
@@ -62,9 +105,17 @@
       "finalPlace": "事件解決",
       "finalSmall": "EPILOGUE",
       "ranks": [
-        {"if": "var:miss==0 && var:turns<70", "label": "名警部"},
-        {"if": "var:miss<=2", "label": "敏腕刑事"},
-        {"label": "がんばった刑事"}
+        {
+          "if": "var:miss==0 && var:turns<70",
+          "label": "名警部"
+        },
+        {
+          "if": "var:miss<=2",
+          "label": "敏腕刑事"
+        },
+        {
+          "label": "がんばった刑事"
+        }
       ],
       "result": "～ 完 ～\n\n行動回数：{turns}\nまちがった指名：{miss}回\n評価：{rank}\n\n遊んでくれてありがとう！"
     }

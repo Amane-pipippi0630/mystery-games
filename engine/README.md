@@ -52,6 +52,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `prologue` | あらすじ画面。`paragraphs`（HTML可）・`cast`（`[名前, 説明]` の配列）・`button`。なければ省略 |
 | `items` | `{id: 表示名}` |
 | `people` | `{id: {name, short}}`。`short` は「みせる」「すいり」で使う短い名前 |
+| `assistant`・`assistantHint` | 助手の人物idと、そのヒントの文（`{name}` が使える）。助手に聞くと、今いる場所でまだ大事な話（証言カードになる話）を聞いていない人がいれば、ふだんのヒントより先にこの文で教える |
 | `endings` | `{id: {bg, place, small, pages, finalBg, finalPlace, finalSmall, ranks, result}}` |
 
 `result` では `{turns}`（行動回数）・`{miss}`（まちがい回数）・`{rank}` が使える。`ranks` は上から順に条件を見て、最初に合ったものの `label` になる。
@@ -85,8 +86,6 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 ```
 
 `text` が `名前「…」` の形なら、名前が話し手のタグとして表示される。
-
-その人に「きく」と次に返ってくる文が、まだ一度も表示されていなければ「まだ聞いていない話がある」として、「きく」ボタン・人物の名前・背景の上の名前タグに●が付く。
 
 ルールに `"card"` を付けると、その返事が**証言カード**として捜査手帳に残る。`"card": true` なら文をそのまま、`"card": "要約"` なら要約を記録する。カードには「誰が・どこで・何を言ったか」という事実だけを書き、「だから怪しい」のような結論は書かない。
 
