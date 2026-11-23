@@ -395,14 +395,42 @@ def kamomejima_ch1(b):
     click(pg, "移動", "談話室"); ask(pg, "康彦"); ask(pg, "玲子"); ask(pg, "三島", n=2)
     assert state(pg)["f"].get("blackout_ready"), state(pg)["f"]
     ask(pg, "鷹宮", "ミステリー談義")
-    for _ in range(10):
+    for _ in range(11):
+        click(pg, "つぎへ")
+    assert "第二章" in pg.locator("#card").inner_text()   # 第2章へ続く
+    st = state(pg)
+    assert len(st["notes"]) == 5 and st["v"]["hints"] == 5, (st["notes"], st["v"])
+    return pg.errs
+
+
+@test
+def kamomejima_ch2(b):
+    """鴎島館 第2章：書庫を破り、島が孤立し、7人の停電中の居場所と現場を調べると章が終わる"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch2')"); pg.click("#card")
+    assert "これまでの話" in pg.locator("#modal").inner_text()
+    pg.click("#modal >> text=つづける")
+    click(pg, "移動", "西棟の廊下"); ask(pg, "磯村")
+    for _ in range(7):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("found")
+    click(pg, "調べる", "床のしみ")
+    click(pg, "移動", "書庫"); click(pg, "調べる", "閂"); click(pg, "調べる", "革のファイル")
+    click(pg, "移動", "玄関ホール"); click(pg, "調べる", "電話")
+    click(pg, "移動", "執事室"); ask(pg, "磯村", "停電のあいだ")
+    click(pg, "移動", "談話室")
+    for p in ["タキ", "康彦", "玲子", "圭", "沙耶", "三島"]:
+        ask(pg, p, "停電のあいだ")
+    for _ in range(6):
         click(pg, "つぎへ")
     for _ in range(3):
         click(pg, "つぎへ")
     m = msg(pg)
-    assert "第1章 おわり" in m and "取材ノート：5件" in m and "相談：5回" in m, m
+    assert "第2章 おわり" in m, m
+    ids = [c.get("id") for c in state(pg)["cards"]]
+    assert "kei_sleep" in ids and "mishima_stay" in ids   # 第3章・第6章の矛盾で使うカード
     assert not pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')").count("kamomejima")
-    click(pg, "タイトルへ")
     return pg.errs
 
 
