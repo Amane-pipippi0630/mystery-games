@@ -179,6 +179,30 @@ def assistant_points_to_unheard(b):
 
 
 @test
+def hint_hospital(b):
+    """先に汐見水産で片桐の名前を知っても、マコトは病院より先に「ハルに薬を見せる」よう言う"""
+    pg = new_shiomi(b)
+    click(pg, "調べる", "薬瓶"); click(pg, "移動", "汐見警察署"); click(pg, "見せる", "カプセル", "大場")
+    click(pg, "移動", "居間")
+    for _ in range(4):
+        click(pg, "聞く", "ハル")
+    for _ in range(3):
+        click(pg, "聞く", "沙織")
+    click(pg, "移動", "書斎"); click(pg, "調べる", "金庫")
+    for d in "0714":
+        click(pg, d)
+    click(pg, "移動", "汐見水産"); click(pg, "調べる", "社長室")
+    for _ in range(3):
+        click(pg, "聞く", "秘書の野村")
+    assert state(pg)["f"].get("know_katagiri") and not state(pg)["f"].get("katagiri_med")
+    click(pg, "聞く", "マコト")
+    m = msg(pg)
+    assert "ハルさんに見せて" in m, m
+    assert "汐見病院・薬局" not in move_options(pg)
+    return pg.errs
+
+
+@test
 def shiomi_wrong_and_missing(b):
     """推理には話を聞いた人だけが出る。証拠が足りないときは足りないものを明かさない。疑いの晴れた人を選ぶとミス"""
     pg = new_shiomi(b)
