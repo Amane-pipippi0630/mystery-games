@@ -93,7 +93,7 @@
     "law": {
       "name": "片桐法律事務所",
       "bg": "law",
-      "unlock": "flag:know_katagiri",
+      "unlock": "flag:law_open",
       "people": [
         "makoto",
         "katagiri"
@@ -189,8 +189,7 @@
         {
           "text": "沙織「叔父の隆？ 叔父ならたぶん、毎晩『東風（トンプー）』っていう雀荘にいます」",
           "do": [
-            "flag:know_tonpu",
-            "toast:雀荘「東風」に行けるようになった"
+            "flag:know_tonpu"
           ],
           "card": "叔父の隆は毎晩、雀荘「東風」にいる"
         },
@@ -241,7 +240,7 @@
           "text": "野村「会社の資金管理は、顧問弁護士の片桐先生にお任せしていました」",
           "do": [
             "flag:know_katagiri",
-            "toast:片桐法律事務所に行けるようになった"
+            "flag:law_open"
           ],
           "card": "会社の資金管理は顧問弁護士の片桐に任せていた"
         }
@@ -294,8 +293,7 @@
         "text": "ハル「そのお薬…先週、片桐先生がわざわざ病院からもらってきてくださったものです。旦那さまの古いご友人で、会社の顧問弁護士の先生ですよ」",
         "do": [
           "flag:know_katagiri",
-          "flag:katagiri_med",
-          "toast:汐見病院・片桐法律事務所に行けるようになった"
+          "flag:katagiri_med"
         ],
         "card": "その薬は先週、片桐が病院からもらってきたもの"
       },
@@ -326,6 +324,7 @@
         "do": [
           "flag:motive",
           "flag:know_katagiri",
+          "flag:law_open",
           "toast:動機が見えてきた"
         ],
         "card": "帳簿の送金先は片桐の個人口座。3年で3000万円以上"
@@ -339,8 +338,7 @@
       "memo": {
         "text": "隆「K？ 俺じゃねえよ。兄貴は『金曜に片桐と話をつける』ってこぼしてたぜ」",
         "do": [
-          "flag:know_katagiri",
-          "toast:片桐法律事務所に行けるようになった"
+          "flag:know_katagiri"
         ],
         "card": "兄は「金曜に片桐と話をつける」と言っていた"
       }
@@ -427,7 +425,7 @@
       "text": "社長の手帳が残っている。今週の金曜日の欄に『片桐』と書いてある。",
       "do": [
         "flag:know_katagiri",
-        "toast:片桐法律事務所に行けるようになった"
+        "flag:law_open"
       ],
       "card": "社長の手帳：今週金曜の欄に「片桐」"
     },

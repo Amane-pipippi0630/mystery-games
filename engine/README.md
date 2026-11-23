@@ -63,7 +63,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `id`・`label`・`title` | 章のid、「第一章」のような番号、章の題 |
 | `card` | `false` にすると章のはじめの題字画面を出さない |
 | `start` | `{loc, text}`。章のはじめの場所と文 |
-| `locations` | `{id: {name, bg, unlock, people, objs, arrive}}`。`unlock` は行けるようになる条件、`objs` は `{id: 表示名}` |
+| `locations` | `{id: {name, bg, unlock, people, objs, arrive}}`。`unlock` は行けるようになる条件（満たした瞬間に「○○に行けるようになった」と自動で通知される）、`objs` は `{id: 表示名}` |
 | `onMove` | 移動するたびに確かめるルールの配列（当てはまるものすべてを実行） |
 | `talk` | `{人物id: 返事}` |
 | `show` | `{人物id: {アイテムid: 返事}}` |
@@ -107,7 +107,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `flag:x`・`unflag:x` | フラグを立てる・下ろす |
 | `set:x=0`・`inc:x` | 数を入れる・1増やす |
 | `miss` | まちがいを1回数える |
-| `toast:文` | 画面の上に通知を出す |
+| `toast:文` | 画面の上に通知を出す（同じ文は1回だけ） |
 | `goto:場所id` | 場所を移る |
 | `puzzle:id` | 番号入力の謎解きを開く |
 | `chapter:章id` | 「つぎへ」のあと、その章を始める |

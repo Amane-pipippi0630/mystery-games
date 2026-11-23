@@ -92,6 +92,32 @@ def no_network_while_playing(b):
     return pg.errs
 
 
+def move_options(pg):
+    click(pg, "いどう")
+    opts = pg.locator("#cmd button").all_inner_texts()
+    click(pg, "もどる")
+    return opts
+
+
+@test
+def unlock_once(b):
+    """片桐法律事務所は汐見水産で知るまで行けず、「行けるようになった」は1回だけ出る"""
+    pg = new_shiomi(b)
+    click(pg, "しらべる", "薬瓶"); click(pg, "いどう", "居間"); click(pg, "みせる", "カプセル", "ハル")
+    opts = move_options(pg)
+    assert "汐見病院・薬局" in opts and "片桐法律事務所" not in opts, opts
+    click(pg, "しらべる", "写真立て")  # 何も開かない行動
+    click(pg, "いどう", "汐見水産")
+    for _ in range(5):
+        click(pg, "きく", "秘書の野村")
+    click(pg, "しらべる", "社長室")
+    assert "片桐法律事務所" in move_options(pg)
+    log = pg.evaluate("window.__mg.toastLog")
+    assert log.count("片桐法律事務所に行けるようになった") == 1, log
+    assert log.count("汐見病院・薬局に行けるようになった") == 1, log
+    return pg.errs
+
+
 @test
 def shiomi_wrong_and_missing(b):
     """証拠が足りないときは逮捕できず、まちがえるとミスが数えられる"""

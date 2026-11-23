@@ -89,7 +89,7 @@ function run(list) {
       case 'set': { const [n, v] = a.split('='); S.v[n] = +v; break; }
       case 'inc': S.v[a] = (S.v[a] || 0) + 1; break;
       case 'miss': S.v.miss = (S.v.miss || 0) + 1; break;
-      case 'toast': toast(a); break;
+      case 'toast': if (!S.toasted) S.toasted = []; if (!S.toasted.includes(a)) { S.toasted.push(a); toast(a); } break;
       case 'goto': pending.goto = a; break;
       case 'puzzle': pending.puzzle = a; break;
       case 'ending': pending.ending = a; break;
@@ -111,7 +111,8 @@ function resolve(entry, key) {
 
 // ---------- 表示 ----------
 let typer = null, full = '', toastT;
-function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
+const toastLog = [];
+function toast(t) { toastLog.push(t); const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
 function say(t, meta) {
   if (t == null) return;
   if (S && !(meta && meta.nolog)) S.log.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t });
@@ -166,9 +167,13 @@ function main() {
   cmds.push(['もちもの', showItems]);
   btns(cmds);
 }
+// 行けるようになった場所は、エンジンが自動で知らせる（シナリオに toast を書かなくてよい）
+const openLocs = () => Object.keys(ch().locations).filter(k => avail(k));
+let openBefore = null;
 function act(rule, meta) {
   S.v.turns = (S.v.turns || 0) + 1;
   pending = {};
+  openBefore = openLocs();
   if (rule) { run(rule.do); if (rule.text) say(rule.text, meta); if (rule.card) addCard(rule, meta); }
   after();
 }
@@ -182,6 +187,11 @@ function addCard(rule, meta) {
 }
 function after() {
   const p = pending; pending = {};
+  if (openBefore) {
+    const now = openLocs().filter(k => !openBefore.includes(k));
+    if (now.length) toast(now.map(k => ch().locations[k].name).join('・') + 'に行けるようになった');
+    openBefore = null;
+  }
   if (p.goto) { S.loc = p.goto; renderScene(); }
   autosave();
   if (p.puzzle) return openPuzzle(p.puzzle);
@@ -195,7 +205,7 @@ function moveMenu() {
   btns([...ids.map(k => [ch().locations[k].name, () => moveTo(k)]), back], 'どこへ行く？');
 }
 function moveTo(id) {
-  S.loc = id; S.v.turns = (S.v.turns || 0) + 1; pending = {};
+  S.loc = id; S.v.turns = (S.v.turns || 0) + 1; pending = {}; openBefore = openLocs();
   runAll(ch().onMove);
   renderScene();
   const r = resolve(loc().arrive, 'arrive:' + id);
@@ -506,7 +516,7 @@ function preload() {
 const preloaded = [];
 
 document.title = D.title;
-window.__mg = { get state() { return S; }, cond, D, openNotebook };
+window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();
