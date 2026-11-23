@@ -178,8 +178,16 @@ function act(rule, meta) {
   S.v.turns = (S.v.turns || 0) + 1;
   pending = {};
   openBefore = openLocs();
-  if (rule) { run(rule.do); if (rule.text) say(rule.text, meta); if (rule.card) addCard(rule, meta); }
+  if (rule) { run(rule.do); if (rule.text) say(rule.text, meta); if (rule.card) addCard(rule, meta); if (rule.note) addNote(rule, meta); }
   after();
+}
+// 取材ノート：ルールに "note": "要約" を付けると、伝記の取材メモとして残る
+function addNote(rule, meta) {
+  if (!S.notes) S.notes = [];
+  if (S.notes.some(n => n.t === rule.note)) return;
+  S.notes.push({ c: S.chapter, p: (meta && meta.p) || null, t: rule.note });
+  S.v.notes = S.notes.length;
+  toast('取材ノートに書き留めた');
 }
 // 証言カード：ルールに "card": true（その文をそのまま）か "card": "要約" を付けると記録される
 function addCard(rule, meta) {
@@ -223,32 +231,66 @@ function moveTo(id) {
   after();
 }
 // まだ聞いていない大事な話があるか（次に返ってくる文が証言カードになるもので、まだ一度も表示されていなければ「ある」）
-function peekTalk(p) {
-  const e = (ch().talk || {})[p];
+function peekEntry(e, key) {
   if (e == null) return null;
   if (typeof e === 'string') return { text: e };
   if (Array.isArray(e)) return e.find(r => cond(r.if)) || null;
-  if (e.seq) return e.seq[Math.min(S.seq['talk:' + p] || 0, e.seq.length - 1)];
+  if (e.seq) return e.seq[Math.min(S.seq[key] || 0, e.seq.length - 1)];
   return cond(e.if) ? e : null;
 }
+const peekTalk = p => peekEntry((ch().talk || {})[p], 'talk:' + p);
+// 話題ごとの会話：talk の値を {"topics": {話題id: 返事}} にすると、聞くときに話題を選べる
+const topicsOf = p => { const e = (ch().talk || {})[p]; return e && e.topics ? Object.keys(e.topics).filter(t => peekEntry(e.topics[t], 'talk:' + p + ':' + t)) : null; };
 function hasNewTalk(p, heard) {
-  const r = peekTalk(p);
-  return !!(r && r.text && r.card && !heard.has(r.text));
+  const e = (ch().talk || {})[p];
+  const rs = e && e.topics ? Object.keys(e.topics).map(t => peekEntry(e.topics[t], 'talk:' + p + ':' + t)) : [peekTalk(p)];
+  return rs.some(r => r && r.text && r.card && !heard.has(r.text));
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
 function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
 function assistantHint() {
   const heard = heardSet();
-  const q = here().find(p => p !== D.assistant && hasNewTalk(p, heard));
-  return q ? { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) } : null;
+  // 同じ人の聞き残しを教えるのは、その章で1回だけ（2回目からはふだんのヒントに進む）
+  const q = here().find(p => p !== D.assistant && hasNewTalk(p, heard) && !S.seq['ahint:' + S.chapter + ':' + p]);
+  if (!q) return null;
+  S.seq['ahint:' + S.chapter + ':' + q] = 1;
+  return { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) };
 }
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
-  const hint = p === D.assistant ? assistantHint() : null;
-  if (hint) { S.seq[key] = (S.seq[key] || 0) + 1; return act(hint, { p }); }
+  const hint = p === D.assistant && !(e && e.topics) ? assistantHint() : null;
+  if (hint) { S.seq[key] = (S.seq[key] || 0) + 1; S.v.hints = (S.v.hints || 0) + 1; return act(hint, { p }); }
+  if (e && e.topics) {
+    const ts = topicsOf(p);
+    return btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
+  }
+  if (tieredHint(e, p, key)) return;
   const r = resolve(e, key);
   if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
+  act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
+}
+// 段階式のヒント：ルールに "hints": [ぼかした文, …, はっきりした文] を書くと、同じ段階で聞くたびに次の文になる
+function tieredHint(e, p, key) {
+  if (!Array.isArray(e)) return false;
+  const i = e.findIndex(r => cond(r.if)), r = e[i];
+  if (!r || !r.hints) return false;
+  const hk = 'hint:' + S.chapter + ':' + key + ':' + i, lv = S.seq[hk] || 0;
+  S.seq[hk] = lv + 1; S.seq[key] = (S.seq[key] || 0) + 1; S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1;
+  S.v.hints = (S.v.hints || 0) + 1;
+  act({ text: r.hints[Math.min(lv, r.hints.length - 1)], do: r.do }, { p });
+  return true;
+}
+function talkTopic(p, t) {
+  const e = ch().talk[p].topics[t], key = 'talk:' + p + ':' + t;
+  if (p === D.assistant && t === D.hintTopic) {
+    const h = assistantHint();
+    if (h) { S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1; S.v.hints = (S.v.hints || 0) + 1; return act(h, { p }); }
+  }
+  if (tieredHint(e, p, key)) return;
+  const r = resolve(e, key);
+  if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
+  S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1;
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
 function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), back], '何を調べる？'); }
@@ -336,7 +378,7 @@ function ending(id) {
     if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
     setScene(E.finalBg || E.bg, E.finalPlace || '', E.finalSmall || '');
     const rank = ((E.ranks || []).find(r => cond(r.if)) || {}).label || '';
-    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec) }));
+    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec), hints: S.v.hints || 0, notes: (S.notes || []).length }));
     btns([['タイトルへ', toTitle, 'primary']], null, 'one');
   };
   next();
@@ -471,7 +513,7 @@ function openNotebook(tab) {
   closeModal();
   const old = $('nbook'); if (old) old.remove();
   const m = document.createElement('div'); m.id = 'nbook';
-  const tabs = [['cards', '証言カード'], ['log', '会話ログ'], ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
+  const tabs = [['cards', '証言カード'], ...(D.notes ? [['notes', D.notes.tab || '取材ノート']] : []), ['log', '会話ログ'], ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
   m.innerHTML = `<div class="nb-head"><h3>捜査手帳</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
@@ -479,7 +521,7 @@ function openNotebook(tab) {
   m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; nbSel = null; openNotebook(); });
   document.body.appendChild(m);
   const body = m.querySelector('.nb-body');
-  ({ cards: nbCards, log: nbLog, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
+  ({ cards: nbCards, notes: nbNotes, log: nbLog, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
 }
 const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
 function entryEl(e, onPin, isCard) {
@@ -562,6 +604,11 @@ function nbLog(body) {
   bar.querySelectorAll('select').forEach(x => x.onchange = () => { nbQ[x.dataset.k] = x.value; draw(); });
   bar.querySelector('.pinonly').onchange = e => { nbQ.pin = e.target.checked; draw(); };
   draw();
+}
+function nbNotes(body) {
+  const ns = S.notes || [];
+  body.innerHTML = `<p class="nb-note">${esc(D.notes.lead || '')}（${ns.length}件）</p>` + (ns.length ? '' : '<p class="nb-empty">まだ何も書き留めていない。</p>');
+  ns.forEach(n => body.appendChild(entryEl({ ...n, l: null }, () => { n.pin = !n.pin; autosave(); openNotebook(); }, true)));
 }
 function nbItems(body) {
   body.innerHTML = S.items.length ? S.items.map(i => `<div class="nb-entry"><div class="txt">${esc(D.items[i])}</div></div>`).join('') : '<p class="nb-empty">まだ何も持っていない。</p>';

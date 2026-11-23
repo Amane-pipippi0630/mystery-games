@@ -65,8 +65,10 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `id`・`label`・`title` | 章のid、「第一章」のような番号、章の題 |
 | `card` | `false` にすると章のはじめの題字画面を出さない |
 | `start` | `{loc, text}`。章のはじめの場所と文 |
-| `locations` | `{id: {name, bg, unlock, people, objs, arrive}}`。`unlock` は行けるようになる条件（満たした瞬間に「○○に行けるようになった」と自動で通知される）、`objs` は `{id: 表示名}` |
+| `locations` | `{id: {name, bg, unlock, people, objs, arrive}}`。`people` には `{"id": "...", "if": "条件"}` も書け、場面によって人を出入りさせられる。`unlock` は行けるようになる条件（満たした瞬間に「○○に行けるようになった」と自動で通知される）、`objs` は `{id: 表示名}` |
 | `onMove` | 移動するたびに確かめるルールの配列（当てはまるものすべてを実行） |
+| `triggers` | 行動のたびに確かめ、条件がそろったら1つだけ動くルール（宴の始まりなど）。`do` に同じトリガーが二度動かないためのフラグを入れる |
+| `events` | `{id: {bg, place, pages, do}}`。何ページか続く場面 |
 | `talk` | `{人物id: 返事}` |
 | `show` | `{人物id: {アイテムid: 返事}}` |
 | `look` | `{調べるものid: 返事}` |
@@ -90,6 +92,18 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 
 ルールに `"card"` を付けると、その返事が**証言カード**として捜査手帳に残る。`"card": true` なら文をそのまま、`"card": "要約"` なら要約を記録する。カードには「誰が・どこで・何を言ったか」という事実だけを書き、「だから怪しい」のような結論は書かない。
 
+### 話題を選んで聞く
+
+`talk` の値を `{"topics": {話題id: 返事, ...}}` にすると、「聞く」で人を選んだあとに話題を選べる。話題の名前は game.json の `topics`（例：`{"ima": "いまのこと", "kuga": "創業者のこと"}`）。いま返事がない話題は出ない。`talked:人物` はすべての話題を合わせた回数なので、「1回目だけの挨拶」はフラグで書く。
+
+### 助手のヒント（段階式）
+
+助手（game.json の `assistant`）の返事のルールに `"hints": [ぼかした文, …, はっきりした文]` を書くと、同じ段階で聞くたびに次の文になる。助手に話題がある場合、`hintTopic` の話題がヒントになる。今いる場所に、まだ証言カードになる話を聞いていない人がいれば、その人について1回だけ先に教える。ヒントを聞いた回数は `{hints}`（結果画面）と `var:hints`（条件）で使える。
+
+### 取材ノート
+
+ルールに `"note": "要約"` を付けると、手帳の「取材ノート」タブに残る（game.json に `notes: {tab, lead}` があるときだけタブが出る）。件数は `var:notes`・`{notes}` で使える。
+
 ### 条件
 
 | 書き方 | 意味 |
@@ -97,7 +111,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `has:capsule` | アイテムを持っている |
 | `flag:sent` | フラグが立っている |
 | `var:wait>=1` | 数の比較（`>=` `<=` `==` `!=` `>` `<`）。比較なしなら0より大きい |
-| `talked:haru>=2` | その人に話した回数 |
+| `talked:haru>=2` | その人に話した回数（話題をすべて合わせた数） |
 | `here:study` | 今その場所にいる |
 | `!`・`&&`・`||`・`( )` | 否定・かつ・または・かっこ |
 
@@ -113,6 +127,8 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `goto:場所id` | 場所を移る |
 | `puzzle:id` | 番号入力の謎解きを開く |
 | `chapter:章id` | 「つぎへ」のあと、その章を始める |
+| `event:id` | 章の `events` の場面を見せる（何ページか続く。最後に `do` を行う） |
+| `card:人物id:文` | 証言カードを残す（人物なしは `card::文`） |
 | `ending:id` | 「つぎへ」のあと、エンディングへ |
 
 ## 矛盾をつく

@@ -102,7 +102,7 @@ class Checker:
             return
         self.cond(where, r.get("if"), ch)
         self.effects(where, r.get("do"), ch)
-        if not r.get("text") and not r.get("do"):
+        if not r.get("text") and not r.get("do") and not r.get("hints"):
             self.err(where, "text も do もありません")
         if r.get("card") is True and not r.get("text"):
             self.err(where, "card: true には text が必要です（または card に要約を書く）")
@@ -188,7 +188,13 @@ def check(g):
         for p, e in ch.get("talk", {}).items():
             if p not in g["people"]:
                 c.err(f"{w}.talk", f"人物 {p} は people にありません")
-            c.entry(f"{w}.talk.{p}", e, ch)
+            if isinstance(e, dict) and "topics" in e:
+                for t, te in e["topics"].items():
+                    if t not in g.get("topics", {}):
+                        c.err(f"{w}.talk.{p}", f"話題 {t} は game.json の topics にありません")
+                    c.entry(f"{w}.talk.{p}.{t}", te, ch)
+            else:
+                c.entry(f"{w}.talk.{p}", e, ch)
         for p, m in ch.get("show", {}).items():
             for it, e in m.items():
                 if it not in g["items"]:
