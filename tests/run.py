@@ -15,6 +15,7 @@ HUB = (ROOT / "index.html").as_uri()
 KAMO = (ROOT / "games/kamomejima/index.html").as_uri()
 FURI = (ROOT / "games/furiko/index.html").as_uri()
 FUYU = (ROOT / "games/fuyu-shiomi/index.html").as_uri()
+EPI = (ROOT / "games/epilogue/index.html").as_uri()
 results = []
 
 
@@ -714,6 +715,32 @@ def fuyu_ch8_end(b):
         click(pg, "つぎへ")
     assert "完" in msg(pg) and state(pg)["v"]["miss"] == 2
     assert "fuyu-shiomi" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
+    return pg.errs
+
+
+@test
+def epilogue_clear(b):
+    """隠しエピローグ：封筒を届け、汐見の浜で開けると、志乃の手紙で終わる"""
+    pg = page(b, EPI)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    click(pg, "調べる", "祖父の箱"); click(pg, "調べる", "新聞")
+    click(pg, "移動", "宮下時計店")
+    click(pg, "見せる", "佐伯修の封筒", "宮下千鶴"); assert "もう少し" in msg(pg)
+    click(pg, "聞く", "宮下千鶴", "いまのこと"); click(pg, "聞く", "宮下千鶴", "手帳のこと")
+    click(pg, "見せる", "佐伯修の封筒", "宮下千鶴")
+    for _ in range(6):
+        click(pg, "つぎへ")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "聞く", "汐見署の警部", "沖田のこと"); click(pg, "聞く", "マコト", "沖田のこと")
+    click(pg, "移動", "佐伯家の墓"); click(pg, "調べる", "墓石")
+    click(pg, "移動", "汐見の浜"); click(pg, "調べる", "波打ちぎわ")
+    texts = []
+    for _ in range(25):
+        if pg.locator("#cmd button", has_text="タイトルへ").count():
+            break
+        texts.append(msg(pg)); click(pg, "つぎへ")
+    assert any("毎月来てくれてありがとう" in t for t in texts)
+    assert "汐見ミステリー 完" in msg(pg)
     return pg.errs
 
 
