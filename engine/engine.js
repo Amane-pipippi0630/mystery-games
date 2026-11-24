@@ -101,6 +101,7 @@ function run(list) {
       case 'ending': pending.ending = a; break;
       case 'chapter': pending.chapter = a; break;
       case 'event': pending.event = a; break;
+      case 'board': pending.board = a; break;
       case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
     }
@@ -221,6 +222,8 @@ function after() {
   autosave();
   if (p.event) return playEvent(p.event);
   if (SIM && p.puzzle) { S.simPuzzle = p.puzzle; return; }
+  if (SIM && p.board) { S.simBoard = p.board; return; }
+  if (p.board) return openBoard(p.board);
   if (SIM && (p.ending || p.chapter)) { S.simEnd = p.ending ? 'ending:' + p.ending : 'chapter:' + p.chapter; return; }
   if (p.puzzle) return openPuzzle(p.puzzle);
   if (p.ending) return nextBtn(() => ending(p.ending));
@@ -336,6 +339,7 @@ function accuse(p) {
     const miss = (A.required || []).filter(x => !cond(x.if)).map(x => '・' + x.label);
     if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n'), name: short(p) }) });
     autosave();
+    if (A.do) return act({ text: A.successText, do: A.do });   // 例：第8章の解決編へ（chapter:ch8）
     if (SIM) { S.simEnd = 'ending:' + A.ending; return; }
     return ending(A.ending);
   }
@@ -376,13 +380,57 @@ function puzzleAnswer(id, code) {
   if (code === P.answer) act(P.success); else act({ text: fmt(P.fail, { code }) });
 }
 
+// ---------- 推理ボード（消去法） ----------
+// 章の boards: {id: {suspects: [人物id], conditions: [{id, label, keeps: [条件に合う人物id], correct}], culprit,
+//   success: ルール, wrong: {none, many, decoy}}}
+// 条件を選ぶたびに、合わない人が外れる。正しい条件をすべて選んで犯人ひとりが残れば成功
+const boardLeft = (B, sel) => B.suspects.filter(p => sel.every(cid => B.conditions.find(c => c.id === cid).keeps.includes(p)));
+function boardSubmit(id, sel) {
+  const B = ch().boards[id];
+  S.simBoard = null;
+  const left = boardLeft(B, sel);
+  // 正しい条件だけで犯人ひとりが残れば成功（犯人に合わない「まちがった条件」を選ぶと、犯人は必ず外れる）
+  const ok = left.length === 1 && left[0] === B.culprit && sel.every(cid => B.conditions.find(c => c.id === cid).correct);
+  if (ok) return act(B.success);
+  const why = !left.length ? B.wrong.none : left.length > 1 ? B.wrong.many : B.wrong.decoy;
+  act({ text: why, do: ['miss'] });
+}
+function openBoard(id) {
+  const B = ch().boards[id];
+  let sel = [];
+  const draw = () => {
+    closeModal();
+    const left = boardLeft(B, sel);
+    const m = document.createElement('div'); m.id = 'modal';
+    m.innerHTML = `<div class="sheet board"><div class="eyebrow">推理ボード</div><h3>${esc(B.title || '犯人の条件')}</h3><p class="nb-note">${esc(B.lead || '')}</p>
+      <div class="b-sus">${B.suspects.map(p => `<span class="${left.includes(p) ? '' : 'out'}">${esc(short(p))}</span>`).join('')}</div>
+      <div class="b-con"></div><div class="row2"></div></div>`;
+    const box = m.querySelector('.b-con');
+    B.conditions.forEach(c => {
+      const b = document.createElement('button'); b.className = 'row' + (sel.includes(c.id) ? ' on' : '');
+      b.innerHTML = `<span class="t">${sel.includes(c.id) ? '☑' : '☐'} ${esc(c.label)}</span>`;
+      b.onclick = () => { sel = sel.includes(c.id) ? sel.filter(x => x !== c.id) : [...sel, c.id]; draw(); };
+      box.appendChild(b);
+    });
+    const r2 = m.querySelector('.row2');
+    const go = document.createElement('button'); go.className = 'big primary'; go.textContent = `この条件で推理する（${sel.length}つ）`;
+    go.disabled = !sel.length; go.onclick = () => { closeModal(); boardSubmit(id, sel); };
+    const no = document.createElement('button'); no.className = 'big'; no.textContent = 'あとで';
+    no.onclick = () => { closeModal(); main(); };
+    r2.append(no, go);
+    document.body.appendChild(m);
+  };
+  draw();
+}
+
 // ---------- 章 ----------
 function startChapter(id) {
   S.chapter = id;
   const C = ch();
   S.loc = C.start.loc;
   store.set('chap:' + id, snapshot((C.label ? C.label + ' ' : '') + (C.title || '') + 'のはじめ'));
-  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); };
+  // start.do：章のはじめにすぐ行う効果（解決編の場面を始める など）
+  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); after(); } };
   if (C.card === false) return go();
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="n">${C.label || ''}</div><div class="t">${C.title || ''}</div><div class="tap">タップしてすすむ</div>`;
@@ -706,14 +754,21 @@ const sim = {
   // 章のはじめの状態を作る（prev に前の章の終わりの状態を渡せる）
   begin(ch_, prev) {
     SIM = true; S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
-    delete S.simEnd; delete S.simPuzzle;
+    delete S.simEnd; delete S.simPuzzle; delete S.simBoard;
     S.chapter = ch_; S.loc = D.chapters[ch_].start.loc; say(D.chapters[ch_].start.text);
+    const sd = D.chapters[ch_].start.do; if (sd) { pending = {}; openBefore = openLocs(); run(sd); after(); }
     return JSON.parse(JSON.stringify(S));
   },
   set(st) { SIM = true; S = JSON.parse(JSON.stringify(st)); },
   get() { return JSON.parse(JSON.stringify(S)); },
   actions() {
     if (S.simEnd) return [];
+    if (S.simBoard) {
+      // 条件の組み合わせをすべて試す
+      const B = ch().boards[S.simBoard], ids = B.conditions.map(c => c.id), out = [];
+      for (let m = 1; m < (1 << ids.length); m++) out.push({ t: 'board', id: S.simBoard, sel: ids.filter((_, i) => m & (1 << i)) });
+      return out;
+    }
     if (S.simPuzzle) { const P = ch().puzzles[S.simPuzzle]; return [{ t: 'code', id: S.simPuzzle, code: P.answer }, { t: 'code', id: S.simPuzzle, code: P.answer === '0000' ? '1111' : '0000' }]; }
     const a = [];
     Object.keys(ch().locations).forEach(k => { if (k !== S.loc && avail(k)) a.push({ t: 'move', k }); });
@@ -739,6 +794,7 @@ const sim = {
       case 'accuse': return accuse(x.p);
       case 'contra': return contradict(x.ids);
       case 'code': return puzzleAnswer(x.id, x.code);
+      case 'board': return boardSubmit(x.id, x.sel);
     }
   },
   seen: () => [...simSeen],
