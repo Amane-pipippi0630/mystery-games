@@ -74,10 +74,10 @@ JS_EXPLORE = r"""
     const v = {}, t = {};
     for (const k in caps) {
       const [kind, n] = k.split(':');
-      const x = kind === 'var' ? (s.v[n] || 0) : (s.seq['talk:' + n] || 0);
+      const x = kind === 'var' ? (s.v[n] || 0) : (s.seq['talkc:' + s.chapter + ':' + n] || 0);
       (kind === 'var' ? v : t)[n] = Math.min(x, caps[k]);
     }
-    const sq = {}; for (const k in seqCaps) sq[k] = Math.min(s.seq[k] || 0, seqCaps[k]);
+    const sq = {}; for (const k in seqCaps) sq[k] = Math.min(s.seq[s.chapter + '|' + k] || 0, seqCaps[k]);
     return JSON.stringify([s.chapter, s.loc, Object.keys(s.f).filter(k => s.f[k] && !ignoreFlag(k)).sort(), [...s.items].sort(), v, t, sq,
       s.cards.map(c => c.id).filter(Boolean).sort(), s.simPuzzle || null, s.simEnd || null]);
   };
