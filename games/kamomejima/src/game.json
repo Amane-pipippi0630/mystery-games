@@ -7,12 +7,13 @@
     "ch1",
     "ch2",
     "ch3",
-    "ch4"
+    "ch4",
+    "ch5"
   ],
   "titleScreen": {
     "eyebrow": "汐見ミステリー 第一作",
     "title": "鴎島館の<br>論理",
-    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第4章まで遊べる試作版）</small>"
+    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第5章まで遊べる試作版）</small>"
   },
   "prologue": {
     "eyebrow": "PROLOGUE",
@@ -70,7 +71,8 @@
     "file": "空の革のファイル",
     "will": "遺言書",
     "box": "鍵付きの小箱",
-    "techou": "鳶色の手帳"
+    "techou": "鳶色の手帳",
+    "memo2": "康彦のメモ"
   },
   "people": {
     "takamiya": {
@@ -177,6 +179,25 @@
         }
       ],
       "result": "～ 第4章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件"
+    },
+    "ch5end": {
+      "bg": "cliff",
+      "place": "灯台の崖",
+      "small": "第五章",
+      "pages": [
+        "第5章「崖の灯台」 おわり",
+        "――この館には、謎が二つある。\n\n（第6章「二つの謎」へつづく）"
+      ],
+      "finalBg": "island",
+      "finalPlace": "つづく",
+      "finalSmall": "試作版",
+      "clear": false,
+      "ranks": [
+        {
+          "label": ""
+        }
+      ],
+      "result": "～ 第5章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回"
     }
   },
   "topics": {
@@ -187,7 +208,8 @@
     "hint": "相談する",
     "dangi": "ミステリー談義",
     "teiden": "停電のあいだ",
-    "asami": "浅見さんのこと"
+    "asami": "浅見さんのこと",
+    "yuube": "昨夜のこと"
   },
   "hintTopic": "hint",
   "notes": {
