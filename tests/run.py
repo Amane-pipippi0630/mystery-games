@@ -331,7 +331,7 @@ def hub(b):
     pg = hub_page(b)
     assert pg.locator(".game").count() == 4
     assert pg.locator(".game[data-id=epilogue]").count() == 0
-    assert pg.locator(".game.soon").count() == 0  # 三部作はすべて遊べる
+    assert pg.locator(".game.soon").count() == 2  # 第二作・第三作はまだ公開しない
     pg.click(".game[data-id=shiomi-port]")
     pg.wait_for_selector("#title:not(.hide)")
     pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "移動", "居間")
