@@ -462,12 +462,44 @@ def kamomejima_ch3(b):
     st = state(pg)
     assert st["f"].get("contra_m2") and any(c.get("id") == "mishima_confess" for c in st["cards"])
     click(pg, "移動", "書庫"); click(pg, "調べる", "右の本棚")
+    for _ in range(7):
+        click(pg, "つぎへ")
+    assert "第四章" in pg.locator("#card").inner_text()   # 第4章へ続く
+    return pg.errs
+
+
+@test
+def kamomejima_ch4(b):
+    """鴎島館 第4章：図面・磯村のうそ（矛盾）・隠し金庫・小箱の番号（1946）・手帳・三島のメモ"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch4')"); pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "調べる", "右の本棚")
+    click(pg, "移動", "玄関ホール"); ask(pg, "沙耶", "館と島のこと")
+    click(pg, "移動", "執事室"); ask(pg, "磯村", "館と島のこと")
+    contra(pg, "書庫には何もない", "空洞")
+    assert state(pg)["f"].get("contra_m3")
+    click(pg, "移動", "書庫"); click(pg, "調べる", "右の本棚")
+    click(pg, "移動", "隠し金庫"); click(pg, "調べる", "隠し金庫")
+    assert "will" in state(pg)["items"]
+    click(pg, "調べる", "小箱")
+    for d in "1950":
+        click(pg, d)
+    assert "開かない" in msg(pg)
+    click(pg, "調べる", "小箱")
+    for d in "1946":
+        click(pg, d)
+    assert "techou" in state(pg)["items"]
+    click(pg, "調べる", "小箱")
+    for _ in range(9):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("techou_read")
+    click(pg, "移動", "談話室"); ask(pg, "三島")
     for _ in range(6):
         click(pg, "つぎへ")
     for _ in range(3):
         click(pg, "つぎへ")
-    m = msg(pg)
-    assert "第3章 おわり" in m, m
+    assert "第4章 おわり" in msg(pg)
     return pg.errs
 
 
