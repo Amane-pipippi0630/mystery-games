@@ -495,11 +495,34 @@ def kamomejima_ch4(b):
         click(pg, "つぎへ")
     assert state(pg)["f"].get("techou_read")
     click(pg, "移動", "談話室"); ask(pg, "三島")
+    for _ in range(9):
+        click(pg, "つぎへ")
+    assert "第五章" in pg.locator("#card").inner_text()   # 第5章へ続く
+    return pg.errs
+
+
+@test
+def kamomejima_ch5(b):
+    """鴎島館 第5章：崖で康彦を見つけ、メモ・濡れた雨具・通用口の鍵・6人の昨夜の居場所で章が終わる"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch5')"); pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "移動", "灯台の崖"); ask(pg, "磯村")
+    for _ in range(6):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("carried")
+    click(pg, "調べる", "康彦の雨具")
+    assert "memo2" in state(pg)["items"]
+    click(pg, "移動", "乾燥室"); click(pg, "調べる", "雨具")
+    click(pg, "移動", "執事室"); ask(pg, "磯村", "昨夜のこと")
+    click(pg, "移動", "談話室")
+    for p in ["タキ", "玲子", "圭", "沙耶", "三島"]:
+        ask(pg, p, "昨夜のこと")
     for _ in range(6):
         click(pg, "つぎへ")
     for _ in range(3):
         click(pg, "つぎへ")
-    assert "第4章 おわり" in msg(pg)
+    assert "第5章 おわり" in msg(pg)
     return pg.errs
 
 
