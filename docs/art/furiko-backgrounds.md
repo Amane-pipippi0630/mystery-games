@@ -17,6 +17,16 @@
 **ネガティブ**
 > people, characters, faces, text, letters, signage, watermark, collage, multiple panels
 
+## 生成状況（2026-11-24）
+
+Canva の画像生成で作成。作業環境からは本体をダウンロードできないため、Canva で開いてダウンロードし、取り込む。
+
+| 名前 | Canva | 状況 |
+|---|---|---|
+| `shop` | [MAHbzmE47lk](https://www.canva.com/M/MAHbzmE47lk) | 生成済み・未取り込み |
+| `workshop` | [MAHbzigvOpA](https://www.canva.com/M/MAHbzigvOpA) | 生成済み・未取り込み |
+| ほか32枚 | | Canva のクレジット上限で止まっている |
+
 ## 一覧
 
 | # | 名前 | 場面 | 時間 | 章 |
