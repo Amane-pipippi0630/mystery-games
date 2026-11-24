@@ -206,7 +206,11 @@ def check(g):
             if len(P["answer"]) != P["length"]:
                 c.err(f"{w}.puzzles.{pid}", "answer の長さが length と合いません")
             c.rule(f"{w}.puzzles.{pid}.success", P["success"], ch)
-        card_ids = set(re.findall(r'"cardId":\s*"([^"]+)"', json.dumps(ch, ensure_ascii=False)))
+        # 証言カードは章をまたいで残るので、この章までのすべての章から集める
+        order = list(g["chapters"])
+        card_ids = set()
+        for prev_id in order[:order.index(cid) + 1]:
+            card_ids |= set(re.findall(r'"cardId":\s*"([^"]+)"', json.dumps(g["chapters"][prev_id], ensure_ascii=False)))
         for i, x in enumerate(ch.get("contradictions", [])):
             wx = f"{w}.contradictions[{i}]"
             if not re.match(r"^[A-Za-z0-9_\-]+$", x.get("id", "")):

@@ -422,12 +422,9 @@ def kamomejima_ch2(b):
     click(pg, "移動", "談話室")
     for p in ["タキ", "康彦", "玲子", "圭", "沙耶", "三島"]:
         ask(pg, p, "停電のあいだ")
-    for _ in range(6):
+    for _ in range(7):
         click(pg, "つぎへ")
-    for _ in range(3):
-        click(pg, "つぎへ")
-    m = msg(pg)
-    assert "第2章 おわり" in m, m
+    assert "第三章" in pg.locator("#card").inner_text()   # 第3章へ続く
     ids = [c.get("id") for c in state(pg)["cards"]]
     assert "kei_sleep" in ids and "mishima_stay" in ids   # 第3章・第6章の矛盾で使うカード
     assert not pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')").count("kamomejima")
@@ -444,6 +441,34 @@ def verify_finds_deadend(b):
     r = v("shiomi-port")
     assert r.returncode == 0 and "結果：問題なし" in r.stdout, r.stdout
     return []
+
+
+@test
+def kamomejima_ch3(b):
+    """鴎島館 第3章：講義、浅見の客室、書庫が無人だったこと、三島のうそ（矛盾）、本棚の血で章が終わる"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    # 第2章で手に入る三島のカードを持っている状態で、第3章を始める
+    pg.evaluate("""() => { const S = window.__mg.state; S.cards.push({ id: 'mishima_stay', c: 'ch2', l: 'salon', p: 'mishima', t: '停電中は談話室から一歩も出ていない', pin: false });
+      window.__mg.startChapter('ch3'); }""")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    ask(pg, "鷹宮")
+    for _ in range(9):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("lecture")
+    click(pg, "移動", "浅見の客室"); click(pg, "調べる", "浅見のかばん")
+    click(pg, "移動", "談話室"); ask(pg, "玲子"); ask(pg, "玲子", "停電のあいだ")
+    contra(pg, "談話室から一歩も出ていない", "手洗いに")
+    st = state(pg)
+    assert st["f"].get("contra_m2") and any(c.get("id") == "mishima_confess" for c in st["cards"])
+    click(pg, "移動", "書庫"); click(pg, "調べる", "右の本棚")
+    for _ in range(6):
+        click(pg, "つぎへ")
+    for _ in range(3):
+        click(pg, "つぎへ")
+    m = msg(pg)
+    assert "第3章 おわり" in m, m
+    return pg.errs
 
 
 @test

@@ -75,7 +75,7 @@ function term(t, src) {
   if (k === 'flag') return !!S.f[n];
   if (k === 'here') return S.loc === n;
   if (k === 'var' || k === 'talked') {
-    const x = k === 'var' ? (S.v[n] || 0) : (S.seq['talk:' + n] || 0);
+    const x = k === 'var' ? (S.v[n] || 0) : (S.seq['talkc:' + S.chapter + ':' + n] || 0);
     if (!op) return x > 0;
     const y = +num;
     return { '>=': x >= y, '<=': x <= y, '==': x === y, '!=': x !== y, '>': x > y, '<': x < y }[op];
@@ -113,7 +113,7 @@ function resolve(entry, key) {
   if (entry == null) return null;
   if (typeof entry === 'string') return { text: entry };
   if (Array.isArray(entry)) return entry.find(r => cond(r.if)) || null;
-  if (entry.seq) { const i = S.seq[key] || 0; S.seq[key] = i + 1; return entry.seq[Math.min(i, entry.seq.length - 1)]; }
+  if (entry.seq) { const k = S.chapter + '|' + key, i = S.seq[k] || 0; S.seq[k] = i + 1; return entry.seq[Math.min(i, entry.seq.length - 1)]; }
   return cond(entry.if) ? entry : null;
 }
 
@@ -240,12 +240,17 @@ function moveTo(id) {
   if (r) { run(r.do); say(r.text); }
   after();
 }
+// 話した回数：talk:人物 は全章の合計（推理で選べる人に使う）、talkc:章:人物 はその章の回数（talked: 条件に使う）
+function bumpTalk(p) {
+  S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1;
+  const k = 'talkc:' + S.chapter + ':' + p; S.seq[k] = (S.seq[k] || 0) + 1;
+}
 // まだ聞いていない大事な話があるか（次に返ってくる文が証言カードになるもので、まだ一度も表示されていなければ「ある」）
 function peekEntry(e, key) {
   if (e == null) return null;
   if (typeof e === 'string') return { text: e };
   if (Array.isArray(e)) return e.find(r => cond(r.if)) || null;
-  if (e.seq) return e.seq[Math.min(S.seq[key] || 0, e.seq.length - 1)];
+  if (e.seq) return e.seq[Math.min(S.seq[S.chapter + '|' + key] || 0, e.seq.length - 1)];
   return cond(e.if) ? e : null;
 }
 const peekTalk = p => peekEntry((ch().talk || {})[p], 'talk:' + p);
@@ -270,14 +275,14 @@ function assistantHint() {
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
   const hint = p === D.assistant && !(e && e.topics) ? assistantHint() : null;
-  if (hint) { S.seq[key] = (S.seq[key] || 0) + 1; S.v.hints = (S.v.hints || 0) + 1; return act(hint, { p }); }
+  if (hint) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(hint, { p }); }
   if (e && e.topics) {
     const ts = topicsOf(p);
     return btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
   }
   if (tieredHint(e, p, key)) return;
   const r = resolve(e, key);
-  if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
+  bumpTalk(p);
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
 // 段階式のヒント：ルールに "hints": [ぼかした文, …, はっきりした文] を書くと、同じ段階で聞くたびに次の文になる
@@ -286,7 +291,7 @@ function tieredHint(e, p, key) {
   const i = e.findIndex(r => cond(r.if)), r = e[i];
   if (!r || !r.hints) return false;
   const hk = 'hint:' + S.chapter + ':' + key + ':' + i, lv = S.seq[hk] || 0;
-  S.seq[hk] = lv + 1; S.seq[key] = (S.seq[key] || 0) + 1; S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1;
+  S.seq[hk] = lv + 1; bumpTalk(p);
   S.v.hints = (S.v.hints || 0) + 1;
   act({ text: r.hints[Math.min(lv, r.hints.length - 1)], do: r.do }, { p });
   return true;
@@ -295,12 +300,11 @@ function talkTopic(p, t) {
   const e = ch().talk[p].topics[t], key = 'talk:' + p + ':' + t;
   if (p === D.assistant && t === D.hintTopic) {
     const h = assistantHint();
-    if (h) { S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1; S.v.hints = (S.v.hints || 0) + 1; return act(h, { p }); }
+    if (h) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(h, { p }); }
   }
   if (tieredHint(e, p, key)) return;
   const r = resolve(e, key);
-  if (!(e && e.seq)) S.seq[key] = (S.seq[key] || 0) + 1;
-  S.seq['talk:' + p] = (S.seq['talk:' + p] || 0) + 1;
+  bumpTalk(p);
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
 function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), back], '何を調べる？'); }
