@@ -10,8 +10,10 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 SHIOMI = (ROOT / "games/shiomi-port/index.html").as_uri()
 MINI = (ROOT / "tests/fixtures/mini/index.html").as_uri()
+EXTRAS = (ROOT / "tests/fixtures/extras/index.html").as_uri()
 HUB = (ROOT / "index.html").as_uri()
 KAMO = (ROOT / "games/kamomejima/index.html").as_uri()
+FURI = (ROOT / "games/furiko/index.html").as_uri()
 results = []
 
 
@@ -595,9 +597,84 @@ def conditions(b):
     return pg.errs
 
 
+@test
+def extras_think_choice_doc(b):
+    """考える・選択式の問い・資料タブ・章ごとの助手が動く"""
+    pg = page(b, EXTRAS)
+    pg.click("text=はじめから"); pg.click("#card")
+    assert pg.locator("#cmd button", has_text="推理").count() == 0
+    click(pg, "考える"); assert "Xさん" in msg(pg)          # 聞き残しを教える
+    click(pg, "考える"); assert "何か足りない" in msg(pg)    # 段階式ヒント
+    click(pg, "考える"); assert "Xに聞こう" in msg(pg)
+    click(pg, "聞く", "人物X")
+    assert "なぜだろう" in msg(pg)
+    click(pg, "手帳を見る"); assert "千鶴の手帳" in pg.inner_text("#nbook h3")
+    pg.click("#nbook .nb-tabs >> text=資料"); assert "0.4℃" in pg.inner_text("#nbook .nb-body")
+    pg.click("#nbook .nb-x")
+    click(pg, "まちがい"); assert "ちがう" in msg(pg)
+    assert pg.locator("#cmd button", has_text="正解").count() == 1   # もう一度選び直せる
+    click(pg, "正解"); click(pg, "つぎへ"); pg.click("#card")
+    click(pg, "聞く", "助手A"); assert "Xに聞いてみて" in msg(pg)   # 章ごとの助手
+    click(pg, "聞く", "人物X"); click(pg, "推理", "X")
+    st = state(pg); assert st["v"]["miss"] == 1 and st["v"]["hints"] == 4, st["v"]
+    return pg.errs
+
+
+@test
+def extras_verify(b):
+    """検証ツールが考える・選択式の問いを扱える"""
+    import subprocess
+    r = subprocess.run(["python3", str(ROOT / "tools/verify.py"), str(ROOT / "tests/fixtures/extras")], capture_output=True, text=True)
+    assert r.returncode == 0 and "詰みなし" in r.stdout, r.stdout[-800:]
+    return []
+
+
+@test
+def furiko_ch1_open(b):
+    """振り子 第1章：磯村が手帳を返し、千鶴の視点（考える・推理なし）で始まる"""
+    pg = page(b, FURI)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    for _ in range(8):
+        click(pg, "つぎへ")
+    assert "techou" in state(pg)["items"]
+    assert pg.locator("#cmd button", has_text="推理").count() == 0
+    click(pg, "考える"); assert "手帳" in msg(pg)
+    click(pg, "移動", "2階の居間"); click(pg, "調べる", "ちゃぶ台")
+    assert "久我の名前で生きる" in msg(pg)
+    return pg.errs
+
+
+@test
+def furiko_ch8_end(b):
+    """振り子 第8章：指名→「なぜ」の選び直し→正解でクリア、⭐️が付く"""
+    pg = page(b, FURI)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("""() => { const m = window.__mg; m.startChapter('ch8');
+      const S = m.state; ['chizuru','ao','okuma','tachibana','komatsu'].forEach(p => S.seq['talk:' + p] = 1); }""")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "聞く", "宮下千鶴", "事件のこと"); click(pg, "聞く", "宮下蒼", "事件のこと")
+    click(pg, "推理", "蒼"); assert "確かめておくこと" in msg(pg)   # 手帳を見ていない
+    click(pg, "移動", "2階の居間"); click(pg, "調べる", "仏壇")
+    click(pg, "推理", "千鶴"); assert "18時15分" in msg(pg)
+    click(pg, "推理", "蒼")
+    for _ in range(8):
+        click(pg, "つぎへ")
+    click(pg, "祖母を警察に"); assert "自首" in msg(pg)
+    click(pg, "長尾を憎んで")
+    click(pg, "手帳を最後まで読む")
+    for _ in range(30):
+        if pg.locator("#cmd button", has_text="タイトルへ").count():
+            break
+        click(pg, "つぎへ")
+    assert "完" in msg(pg)
+    assert state(pg)["v"]["miss"] == 2
+    assert "furiko" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
-    for f in ["tests/fixtures/mini", "tests/fixtures/deadend"]:
+    for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:
         subprocess.run(["python3", str(ROOT / "tools/build.py"), str(ROOT / f)], check=True, capture_output=True)
     ok = 0
     with sync_playwright() as p:

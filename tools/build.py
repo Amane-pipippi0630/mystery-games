@@ -21,7 +21,7 @@ BG_QUALITY = 80      # WebPの画質
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
 TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
-EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card", "board"}
+EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card", "board", "choice", "doc"}
 
 
 class Checker:
@@ -76,6 +76,10 @@ class Checker:
                 self.err(where, f"章 {a} はありません")
             elif k == "board" and a not in ch.get("boards", {}):
                 self.err(where, f"推理ボード {a} はありません")
+            elif k == "choice" and a not in ch.get("choices", {}):
+                self.err(where, f"選択式の問い {a} はありません")
+            elif k == "doc" and a not in self.g.get("docs", {}):
+                self.err(where, f"資料 {a} は game.json の docs にありません")
             elif k == "event" and a not in ch.get("events", {}):
                 self.err(where, f"イベント {a} はありません")
             elif k == "card" and ":" not in a:
@@ -207,6 +211,9 @@ def check(g):
         for pid, P in ch.get("puzzles", {}).items():
             if len(P["answer"]) != P["length"]:
                 c.err(f"{w}.puzzles.{pid}", "answer の長さが length と合いません")
+            for x in P.get("answers", []):
+                if len(x) != P["length"]:
+                    c.err(f"{w}.puzzles.{pid}", f"answers の {x} の長さが length と合いません")
             c.rule(f"{w}.puzzles.{pid}.success", P["success"], ch)
         # 証言カードは章をまたいで残るので、この章までのすべての章から集める
         order = list(g["chapters"])
@@ -238,6 +245,17 @@ def check(g):
                 if x.get("correct") and B["culprit"] not in x["keeps"]:
                     c.err(f"{w}.boards.{bid}", f"正しい条件 {x['id']} に犯人が当てはまっていません")
             c.rule(f"{w}.boards.{bid}.success", B["success"], ch)
+        for qid, Q in ch.get("choices", {}).items():
+            if len(Q.get("options", [])) < 2:
+                c.err(f"{w}.choices.{qid}", "選択肢は2つ以上にします")
+            for i, o in enumerate(Q.get("options", [])):
+                if not o.get("label"):
+                    c.err(f"{w}.choices.{qid}[{i}]", "label がありません")
+                c.rule(f"{w}.choices.{qid}[{i}]", o, ch)
+        if "think" in ch:
+            c.entry(f"{w}.think", ch["think"], ch)
+        if ch.get("assistant") and ch["assistant"] not in g["people"]:
+            c.err(w, f"助手 {ch['assistant']} は people にありません")
         A = ch.get("accuse")
         if A:
             for p in A["suspects"]:

@@ -79,7 +79,7 @@ JS_EXPLORE = r"""
     }
     const sq = {}; for (const k in seqCaps) sq[k] = Math.min(s.seq[s.chapter + '|' + k] || 0, seqCaps[k]);
     return JSON.stringify([s.chapter, s.loc, Object.keys(s.f).filter(k => s.f[k] && !ignoreFlag(k)).sort(), [...s.items].sort(), v, t, sq,
-      s.cards.map(c => c.id).filter(Boolean).sort(), s.simPuzzle || null, s.simBoard || null, s.simEnd || null]);
+      s.cards.map(c => c.id).filter(Boolean).sort(), s.simPuzzle || null, s.simBoard || null, s.simChoice || null, (s.docs || []).slice().sort(), s.simEnd || null]);
   };
   const errors = [];
   const step = (st, a) => {
@@ -186,7 +186,7 @@ def chapter_texts(ch):
     for b in ch.get("boards", {}).values():
         out.extend(b["wrong"].values())
         walk(b["success"])
-    for part in ("talk", "show", "look", "events", "locations", "puzzles", "accuse", "contradictions"):
+    for part in ("talk", "show", "look", "events", "locations", "puzzles", "accuse", "contradictions", "choices", "think"):
         if part in ch:
             if part == "look":
                 for v in ch[part].values():

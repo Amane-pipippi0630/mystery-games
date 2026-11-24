@@ -119,3 +119,4 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 #modal .board .row2{display:flex;gap:8px;margin-top:10px}
 #modal .board .row2 .big{flex:1;width:auto}
 #modal .board .row2 .big[disabled]{opacity:.4}
+.nb-entry.doc{padding-right:14px}.nb-entry.doc .txt{white-space:pre-wrap;font-variant-numeric:tabular-nums;line-height:1.7}

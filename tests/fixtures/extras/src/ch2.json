@@ -1,0 +1,5 @@
+{"id": "ch2", "label": "第二章", "title": "ふたり", "assistant": "a", "assistantHint": "A「{name}に聞いてみて」",
+ "start": {"loc": "hall", "text": "Aと一緒だ。"},
+ "locations": {"hall": {"name": "広間", "people": ["a", "x"], "objs": {}}},
+ "talk": {"a": "A「ふつうの話」", "x": {"text": "X「犯人は自分だ」", "card": true}},
+ "accuse": {"suspects": ["a", "x"], "culprit": "x", "ending": "end", "wrong": {"a": {"text": "ちがう", "do": ["miss"]}}}}

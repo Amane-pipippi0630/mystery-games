@@ -128,6 +128,7 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 #modal .board .row2{display:flex;gap:8px;margin-top:10px}
 #modal .board .row2 .big{flex:1;width:auto}
 #modal .board .row2 .big[disabled]{opacity:.4}
+.nb-entry.doc{padding-right:14px}.nb-entry.doc .txt{white-space:pre-wrap;font-variant-numeric:tabular-nums;line-height:1.7}
 
 </style>
 </head>
@@ -180,6 +181,9 @@ const loc = () => ch().locations[S.loc];
 const here = (L = loc()) => (L.people || []).filter(p => typeof p === 'string' || cond(p.if)).map(p => typeof p === 'string' ? p : p.id);
 const person = p => D.people[p] || { name: p };
 const short = p => person(p).short || person(p).name;
+// 助手（ヒント役）は章ごとに変えられる：章の assistant / assistantHint / hintTopic が game.json より優先
+const AS = () => ('assistant' in ch()) ? ch().assistant : D.assistant;
+const HT = () => ch().hintTopic || D.hintTopic;
 const fmt = (t, o) => String(t).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] : m));
 function snapshot(label) {
   return { state: JSON.parse(JSON.stringify(S)), at: Date.now(), label: label || ((ch().label ? ch().label + ' ' : '') + (loc() ? loc().name : '')) };
@@ -248,6 +252,8 @@ function run(list) {
       case 'chapter': pending.chapter = a; break;
       case 'event': pending.event = a; break;
       case 'board': pending.board = a; break;
+      case 'choice': pending.choice = a; break;
+      case 'doc': if (!S.docs) S.docs = []; if (!S.docs.includes(a)) { S.docs.push(a); toast('資料に追加：' + D.docs[a].title); } break;
       case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
     }
@@ -301,6 +307,7 @@ const IC = {
   '調べる': '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
   '見せる': '<rect x="3" y="8" width="11" height="13" rx="2"/><path d="M13 3h8v8M21 3l-9 9"/>',
   '推理': '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
+  '考える': '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
   '手帳': '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h5M10 12h5"/>',
 };
 function btns(list, label, mode) {
@@ -321,6 +328,7 @@ const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 function main() {
   if (S.done || SIM) return;
   const cmds = [['移動', moveMenu], ['聞く', askMenu], ['調べる', lookMenu], ['見せる', showMenu]];
+  if (ch().think) cmds.push(['考える', think]);
   if (ch().accuse) cmds.push(['推理', accuseMenu]);
   cmds.push(['手帳', () => openNotebook()]);
   btns(cmds);
@@ -361,7 +369,7 @@ function after() {
   }
   if (p.goto) { S.loc = p.goto; renderScene(); }
   // 自動の進行：条件がそろったトリガーを1つだけ動かす（トリガーには once 用のフラグを do に入れておく）
-  if (!p.event && !p.ending && !p.chapter && !p.puzzle) {
+  if (!p.event && !p.ending && !p.chapter && !p.puzzle && !p.choice) {
     const t = (ch().triggers || []).find(r => cond(r.if));
     if (t) { pending = {}; run(t.do); Object.assign(p, pending); pending = {}; }
   }
@@ -369,6 +377,9 @@ function after() {
   if (p.event) return playEvent(p.event);
   if (SIM && p.puzzle) { S.simPuzzle = p.puzzle; return; }
   if (SIM && p.board) { S.simBoard = p.board; return; }
+  if (!p.choice) reask = null;
+  if (SIM && p.choice) { S.simChoice = p.choice; return; }
+  if (p.choice) return openChoice(p.choice);
   if (p.board) return openBoard(p.board);
   if (SIM && (p.ending || p.chapter)) { S.simEnd = p.ending ? 'ending:' + p.ending : 'chapter:' + p.chapter; return; }
   if (p.puzzle) return openPuzzle(p.puzzle);
@@ -413,17 +424,17 @@ function hasNewTalk(p, heard) {
 const heardSet = () => new Set(S.log.map(e => e.t));
 function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
-function assistantHint() {
+function assistantHint(tmpl) {
   const heard = heardSet();
   // 同じ人の聞き残しを教えるのは、その章で1回だけ（2回目からはふだんのヒントに進む）
-  const q = here().find(p => p !== D.assistant && hasNewTalk(p, heard) && !S.seq['ahint:' + S.chapter + ':' + p]);
+  const q = here().find(p => p !== AS() && hasNewTalk(p, heard) && !S.seq['ahint:' + S.chapter + ':' + p]);
   if (!q) return null;
   S.seq['ahint:' + S.chapter + ':' + q] = 1;
-  return { text: fmt(D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) };
+  return { text: fmt(tmpl || ch().assistantHint || D.assistantHint || '{name}さん、まだ何か知っていそうですよ。', { name: short(q) }) };
 }
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
-  const hint = p === D.assistant && !(e && e.topics) ? assistantHint() : null;
+  const hint = p === AS() && !(e && e.topics) ? assistantHint() : null;
   if (hint) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(hint, { p }); }
   if (e && e.topics) {
     const ts = topicsOf(p);
@@ -447,7 +458,7 @@ function tieredHint(e, p, key) {
 }
 function talkTopic(p, t) {
   const e = ch().talk[p].topics[t], key = 'talk:' + p + ':' + t;
-  if (p === D.assistant && t === D.hintTopic) {
+  if (p === AS() && t === HT()) {
     const h = assistantHint();
     if (h) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(h, { p }); }
   }
@@ -505,6 +516,41 @@ function playEvent(id) {
     renderScene(); after();
   };
   next();
+}
+
+// ---------- 考える（助手のいない章のヒント） ----------
+// 章の think：ルール（hints も使える）。まず「まだ話を聞いていない人」を thinkHint の文で教え、なければ think の文
+function think() {
+  const h = assistantHint(ch().thinkHint);
+  if (h) { S.v.hints = (S.v.hints || 0) + 1; return act(h); }
+  const e = ch().think;
+  if (Array.isArray(e)) {
+    const i = e.findIndex(r => cond(r.if)), r = e[i];
+    if (r && r.hints) {
+      const hk = 'hint:' + S.chapter + ':think:' + i, lv = S.seq[hk] || 0;
+      S.seq[hk] = lv + 1; S.v.hints = (S.v.hints || 0) + 1;
+      return act({ text: r.hints[Math.min(lv, r.hints.length - 1)], do: r.do });
+    }
+  }
+  act(resolve(e, 'think') || { text: '…いまは、考えがまとまらない。' });
+}
+
+// ---------- 選択式の問い ----------
+// 章の choices: {id: {prompt, label, options: [{label, text, do, ...ルール}]}}。選んだ選択肢のルールを行う
+// まちがいの選択肢は do に "miss" と "choice:同じid" を入れると、もう一度選び直しになる
+function openChoice(id) {
+  const Q = ch().choices[id];
+  // 選び直しのときは、まちがいの返事を残したまま選択肢だけ出す
+  if (Q.prompt && reask !== id) say(Q.prompt, { nolog: true });
+  reask = null;
+  // 選ぶ前に手帳（資料・証言カード）を見返せる
+  btns([...Q.options.map((o, i) => [o.label, () => choose(id, i)]), ['手帳を見る', () => openNotebook(), 'back']], Q.label || '選ぶ');
+}
+let reask = null;
+function choose(id, i) {
+  S.simChoice = null; reask = id;
+  const o = ch().choices[id].options[i];
+  act(o);
 }
 
 // ---------- 謎解き（番号入力） ----------
@@ -731,15 +777,16 @@ function openNotebook(tab) {
   closeModal();
   const old = $('nbook'); if (old) old.remove();
   const m = document.createElement('div'); m.id = 'nbook';
-  const tabs = [['cards', '証言カード'], ...(D.notes ? [['notes', D.notes.tab || '取材ノート']] : []), ['log', '会話ログ'], ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
-  m.innerHTML = `<div class="nb-head"><h3>捜査手帳</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
+  const tabs = [['cards', '証言カード'], ...(D.notes ? [['notes', D.notes.tab || '取材ノート']] : []), ['log', '会話ログ'], ...(D.docs ? [['docs', '資料']] : []), ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
+  m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査手帳')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
   m.querySelector('.nb-x').onclick = () => { nbSel = null; m.remove(); };
   m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; nbSel = null; openNotebook(); });
   document.body.appendChild(m);
   const body = m.querySelector('.nb-body');
-  ({ cards: nbCards, notes: nbNotes, log: nbLog, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
+  if (nbTab === 'docs' && !D.docs) nbTab = 'cards';
+  ({ cards: nbCards, notes: nbNotes, log: nbLog, docs: nbDocs, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
 }
 const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
 function entryEl(e, onPin, isCard) {
@@ -828,6 +875,11 @@ function nbNotes(body) {
   body.innerHTML = `<p class="nb-note">${esc(D.notes.lead || '')}（${ns.length}件）</p>` + (ns.length ? '' : '<p class="nb-empty">まだ何も書き留めていない。</p>');
   ns.forEach(n => body.appendChild(entryEl({ ...n, l: null }, () => { n.pin = !n.pin; autosave(); openNotebook(); }, true)));
 }
+// 資料：doc:id で増える。表や数字を見ながら推理するためのもの（game.json の docs: {id: {title, text}}）
+function nbDocs(body) {
+  const ds = S.docs || [];
+  body.innerHTML = ds.length ? ds.map(k => `<div class="nb-entry doc"><div class="meta">${esc(D.docs[k].title)}</div><div class="txt">${esc(D.docs[k].text)}</div></div>`).join('') : '<p class="nb-empty">まだ資料はありません。</p>';
+}
 function nbItems(body) {
   body.innerHTML = S.items.length ? S.items.map(i => `<div class="nb-entry"><div class="txt">${esc(D.items[i])}</div></div>`).join('') : '<p class="nb-empty">まだ何も持っていない。</p>';
 }
@@ -900,7 +952,7 @@ const sim = {
   // 章のはじめの状態を作る（prev に前の章の終わりの状態を渡せる）
   begin(ch_, prev) {
     SIM = true; S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
-    delete S.simEnd; delete S.simPuzzle; delete S.simBoard;
+    delete S.simEnd; delete S.simPuzzle; delete S.simBoard; delete S.simChoice;
     S.chapter = ch_; S.loc = D.chapters[ch_].start.loc; say(D.chapters[ch_].start.text);
     const sd = D.chapters[ch_].start.do; if (sd) { pending = {}; openBefore = openLocs(); run(sd); after(); }
     return JSON.parse(JSON.stringify(S));
@@ -915,9 +967,11 @@ const sim = {
       for (let m = 1; m < (1 << ids.length); m++) out.push({ t: 'board', id: S.simBoard, sel: ids.filter((_, i) => m & (1 << i)) });
       return out;
     }
+    if (S.simChoice) return ch().choices[S.simChoice].options.map((_, i) => ({ t: 'choice', id: S.simChoice, i }));
     if (S.simPuzzle) { const P = ch().puzzles[S.simPuzzle]; return [{ t: 'code', id: S.simPuzzle, code: P.answer }, { t: 'code', id: S.simPuzzle, code: P.answer === '0000' ? '1111' : '0000' }]; }
     const a = [];
     Object.keys(ch().locations).forEach(k => { if (k !== S.loc && avail(k)) a.push({ t: 'move', k }); });
+    if (ch().think) a.push({ t: 'think' });
     here().forEach(p => { const ts = topicsOf(p); if (ts) ts.forEach(tp => a.push({ t: 'topic', p, tp })); else a.push({ t: 'talk', p }); });
     Object.keys(loc().objs || {}).forEach(o => a.push({ t: 'look', o }));
     S.items.forEach(i => here().forEach(p => a.push({ t: 'show', i, p })));
@@ -941,6 +995,8 @@ const sim = {
       case 'contra': return contradict(x.ids);
       case 'code': return puzzleAnswer(x.id, x.code);
       case 'board': return boardSubmit(x.id, x.sel);
+      case 'choice': return choose(x.id, x.i);
+      case 'think': return think();
     }
   },
   seen: () => [...simSeen],

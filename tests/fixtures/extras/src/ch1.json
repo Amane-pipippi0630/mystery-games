@@ -1,0 +1,9 @@
+{"id": "ch1", "label": "第一章", "title": "ひとり", "nbTitle": "千鶴の手帳",
+ "start": {"loc": "room", "text": "ひとりで考える。"},
+ "thinkHint": "（{name}さんに、まだ聞いていないことがある）",
+ "think": [{"if": "!flag:got", "hints": ["（何か足りない）", "（Xに聞こう）"]}, {"text": "（答えを選ぼう）"}],
+ "locations": {"room": {"name": "部屋", "people": ["x"], "objs": {}}},
+ "talk": {"x": [{"if": "!flag:got", "text": "X「表をどうぞ」", "card": true, "do": ["flag:got", "doc:table", "choice:why"]}, {"text": "X「もう渡した」"}]},
+ "choices": {"why": {"prompt": "なぜだろう？", "label": "理由を選ぶ", "options": [
+   {"label": "まちがい", "text": "ちがう。", "do": ["miss", "choice:why"]},
+   {"label": "正解", "text": "そうだ。", "do": ["chapter:ch2"]}]}}}

@@ -1,0 +1,4 @@
+{"id": "test-extras", "title": "拡張テスト", "start": "ch1", "chapters": ["ch1", "ch2"], "titleScreen": {"title": "拡張"},
+ "items": {}, "people": {"a": {"name": "助手A", "short": "A"}, "x": {"name": "人物X", "short": "X"}},
+ "docs": {"table": {"title": "冷え方の表", "text": "店内　0.4℃/時\n車内　0.3℃/時"}},
+ "endings": {"end": {"pages": ["おわり。"], "ranks": [{"label": "OK"}], "result": "完 {rank} {hints}"}}}
