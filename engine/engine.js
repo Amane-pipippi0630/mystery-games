@@ -106,6 +106,7 @@ function run(list) {
       case 'event': pending.event = a; break;
       case 'board': pending.board = a; break;
       case 'choice': pending.choice = a; break;
+      case 'search': pending.search = a; break;
       case 'doc': if (!S.docs) S.docs = []; if (!S.docs.includes(a)) { S.docs.push(a); toast('資料に追加：' + D.docs[a].title); } break;
       case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
@@ -222,7 +223,7 @@ function after() {
   }
   if (p.goto) { S.loc = p.goto; renderScene(); }
   // 自動の進行：条件がそろったトリガーを1つだけ動かす（トリガーには once 用のフラグを do に入れておく）
-  if (!p.event && !p.ending && !p.chapter && !p.puzzle && !p.choice) {
+  if (!p.event && !p.ending && !p.chapter && !p.puzzle && !p.choice && !p.search) {
     const t = (ch().triggers || []).find(r => cond(r.if));
     if (t) { pending = {}; run(t.do); Object.assign(p, pending); pending = {}; }
   }
@@ -230,7 +231,9 @@ function after() {
   if (p.event) return playEvent(p.event);
   if (SIM && p.puzzle) { S.simPuzzle = p.puzzle; return; }
   if (SIM && p.board) { S.simBoard = p.board; return; }
-  if (!p.choice) reask = null;
+  if (!p.choice && !p.search) reask = null;
+  if (SIM && p.search) { S.simSearch = p.search; return; }
+  if (p.search) return openSearch(p.search);
   if (SIM && p.choice) { S.simChoice = p.choice; return; }
   if (p.choice) return openChoice(p.choice);
   if (p.board) return openBoard(p.board);
@@ -406,6 +409,32 @@ function choose(id, i) {
   act(o);
 }
 
+// ---------- 記事の検索 ----------
+// 章の searches: {id: {label, prompt, placeholder, entries: [{keys: [ことば...], ...ルール}], none}}。効果 search:id で出す
+// 入力した言葉に keys のどれかが含まれていれば、そのルールを行う（最初に当たったもの。if も使える）
+const norm = t => String(t).replace(/\s/g, '').normalize('NFKC');
+function searchAnswer(id, q) {
+  const Q = ch().searches[id]; S.simSearch = null;
+  // 見つからないときは、その返事を残したまま入力欄を出し直す
+  if (!norm(q)) { reask = id; return act({ text: Q.empty || '何も入力していない。', do: ['search:' + id] }); }
+  S.v.searches = (S.v.searches || 0) + 1;
+  const hit = Q.entries.find(e => cond(e.if) && e.keys.some(k => norm(q).includes(norm(k))));
+  if (hit) return act(hit);
+  reask = id; act({ text: fmt(Q.none || '「{q}」の記事は見つからなかった。', { q }), do: ['search:' + id] });
+}
+function openSearch(id) {
+  const Q = ch().searches[id];
+  if (Q.prompt && reask !== id) say(Q.prompt, { nolog: true });
+  reask = null;
+  const c = $('cmd'); c.innerHTML = ''; c.className = 'list';
+  c.insertAdjacentHTML('beforeend', `<div class="label">${esc(Q.label || 'ことばで探す')}</div><input id="sq" type="search" enterkeyhint="search" placeholder="${esc(Q.placeholder || '例：会社の名前')}" autocomplete="off">`);
+  const go = () => searchAnswer(id, $('sq').value);
+  $('sq').onkeydown = e => { if (e.key === 'Enter') go(); };
+  [['探す', go, 'primary'], ['手帳を見る', () => openNotebook(), 'back'], ['やめる', () => main(), 'back']].forEach(([t, fn, cls]) => {
+    const b = document.createElement('button'); b.className = cls; b.innerHTML = `<span>${t}</span>`; b.onclick = fn; c.appendChild(b);
+  });
+}
+
 // ---------- 謎解き（番号入力） ----------
 function openPuzzle(id) {
   const P = ch().puzzles[id]; let code = '';
@@ -498,7 +527,7 @@ function ending(id) {
     if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
     setScene(E.finalBg || E.bg, E.finalPlace || '', E.finalSmall || '');
     const rank = ((E.ranks || []).find(r => cond(r.if)) || {}).label || '';
-    say(fmt(E.result, { turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec), hints: S.v.hints || 0, notes: (S.notes || []).length }));
+    say(fmt(E.result, { ...S.v, turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec), hints: S.v.hints || 0, notes: (S.notes || []).length }));
     btns([['タイトルへ', toTitle, 'primary']], null, 'one');
   };
   next();
@@ -809,7 +838,7 @@ const sim = {
   // 章のはじめの状態を作る（prev に前の章の終わりの状態を渡せる）
   begin(ch_, prev) {
     SIM = true; S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
-    delete S.simEnd; delete S.simPuzzle; delete S.simBoard; delete S.simChoice;
+    delete S.simEnd; delete S.simPuzzle; delete S.simBoard; delete S.simChoice; delete S.simSearch;
     S.chapter = ch_; S.loc = D.chapters[ch_].start.loc; resetFor(D.chapters[ch_]); say(D.chapters[ch_].start.text);
     const sd = D.chapters[ch_].start.do; if (sd) { pending = {}; openBefore = openLocs(); run(sd); after(); }
     return JSON.parse(JSON.stringify(S));
@@ -824,6 +853,7 @@ const sim = {
       for (let m = 1; m < (1 << ids.length); m++) out.push({ t: 'board', id: S.simBoard, sel: ids.filter((_, i) => m & (1 << i)) });
       return out;
     }
+    if (S.simSearch) { const Q = ch().searches[S.simSearch]; return [...Q.entries.map(e => ({ t: 'search', id: S.simSearch, q: e.keys[0] })), { t: 'search', id: S.simSearch, q: 'ああああ' }]; }
     if (S.simChoice) return ch().choices[S.simChoice].options.map((_, i) => ({ t: 'choice', id: S.simChoice, i }));
     if (S.simPuzzle) { const P = ch().puzzles[S.simPuzzle]; return [{ t: 'code', id: S.simPuzzle, code: P.answer }, { t: 'code', id: S.simPuzzle, code: P.answer === '0000' ? '1111' : '0000' }]; }
     const a = [];
@@ -853,6 +883,7 @@ const sim = {
       case 'code': return puzzleAnswer(x.id, x.code);
       case 'board': return boardSubmit(x.id, x.sel);
       case 'choice': return choose(x.id, x.i);
+      case 'search': return searchAnswer(x.id, x.q);
       case 'think': return think();
     }
   },

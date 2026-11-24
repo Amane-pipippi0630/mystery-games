@@ -188,3 +188,5 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | 手帳の名前 | game.json か章に `"nbTitle"`（既定は「捜査手帳」） |
 | 答えの幅 | 謎解きに `"answers": ["1740", "1745", "1750"]` を書くと、answer のほかにも正解にする（計算の丸めの違いを許す） |
 | 視点の切り替え | 章に `"freshNotebook": true` を書くと、その章のはじめに証言カード・もちもの・資料を空にする（会話ログとメモは残る）。倒叙で犯人側から刑事側へ移るとき用 |
+| 記事の検索 | 章に `"searches": {id: {label, prompt, placeholder, entries: [{keys: [ことば…], text, do}], none}}`。効果 `search:id` で入力欄が出る。入力に keys のどれかが含まれれば、そのルール（`if` も使える）。検索した回数は `var:searches` |
+| 日数 | 決まった仕組みはない。`inc:day` などで数える。エンディングの result には `{day}` のように、どの変数（var）でも出せる |
