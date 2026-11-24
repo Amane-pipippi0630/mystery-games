@@ -535,10 +535,10 @@ function boardSubmit(id, sel) {
   const B = ch().boards[id];
   S.simBoard = null;
   const left = boardLeft(B, sel);
-  const correct = B.conditions.filter(c => c.correct).map(c => c.id);
-  const ok = sel.length === correct.length && correct.every(c => sel.includes(c));
+  // 正しい条件だけで犯人ひとりが残れば成功（犯人に合わない「まちがった条件」を選ぶと、犯人は必ず外れる）
+  const ok = left.length === 1 && left[0] === B.culprit && sel.every(cid => B.conditions.find(c => c.id === cid).correct);
   if (ok) return act(B.success);
-  const why = !left.length ? B.wrong.none : left.length > 1 ? B.wrong.many : left[0] !== B.culprit || sel.some(c => !correct.includes(c)) ? B.wrong.decoy : B.wrong.many;
+  const why = !left.length ? B.wrong.none : left.length > 1 ? B.wrong.many : B.wrong.decoy;
   act({ text: why, do: ['miss'] });
 }
 function openBoard(id) {
@@ -575,7 +575,8 @@ function startChapter(id) {
   const C = ch();
   S.loc = C.start.loc;
   store.set('chap:' + id, snapshot((C.label ? C.label + ' ' : '') + (C.title || '') + 'のはじめ'));
-  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); };
+  // start.do：章のはじめにすぐ行う効果（解決編の場面を始める など）
+  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); after(); } };
   if (C.card === false) return go();
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="n">${C.label || ''}</div><div class="t">${C.title || ''}</div><div class="tap">タップしてすすむ</div>`;
@@ -901,6 +902,7 @@ const sim = {
     SIM = true; S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
     delete S.simEnd; delete S.simPuzzle; delete S.simBoard;
     S.chapter = ch_; S.loc = D.chapters[ch_].start.loc; say(D.chapters[ch_].start.text);
+    const sd = D.chapters[ch_].start.do; if (sd) { pending = {}; openBefore = openLocs(); run(sd); after(); }
     return JSON.parse(JSON.stringify(S));
   },
   set(st) { SIM = true; S = JSON.parse(JSON.stringify(st)); },
@@ -908,9 +910,10 @@ const sim = {
   actions() {
     if (S.simEnd) return [];
     if (S.simBoard) {
-      const B = ch().boards[S.simBoard], correct = B.conditions.filter(c => c.correct).map(c => c.id);
-      const decoy = B.conditions.filter(c => !c.correct).map(c => c.id);
-      return [{ t: 'board', id: S.simBoard, sel: correct }, { t: 'board', id: S.simBoard, sel: correct.slice(0, -1).concat(decoy.slice(0, 1)) }, { t: 'board', id: S.simBoard, sel: correct.slice(0, 1) }];
+      // 条件の組み合わせをすべて試す
+      const B = ch().boards[S.simBoard], ids = B.conditions.map(c => c.id), out = [];
+      for (let m = 1; m < (1 << ids.length); m++) out.push({ t: 'board', id: S.simBoard, sel: ids.filter((_, i) => m & (1 << i)) });
+      return out;
     }
     if (S.simPuzzle) { const P = ch().puzzles[S.simPuzzle]; return [{ t: 'code', id: S.simPuzzle, code: P.answer }, { t: 'code', id: S.simPuzzle, code: P.answer === '0000' ? '1111' : '0000' }]; }
     const a = [];
