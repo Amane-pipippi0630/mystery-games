@@ -153,6 +153,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(KEY + ':' + k, JSON.stringify(v)); } catch (e) {} },
 };
 function markCleared() {
+  if (SIM) return;
   try {
     const c = JSON.parse(localStorage.getItem('mg:cleared') || '[]');
     if (!c.includes(D.id)) { c.push(D.id); localStorage.setItem('mg:cleared', JSON.stringify(c)); }
@@ -162,6 +163,9 @@ function markCleared() {
 // ---------- 状態 ----------
 let S = null;
 let pending = {};
+// 検証モード（tools/verify.py）：画面に何も出さず、場面は一気に進め、章の終わりや謎解きで止まる
+let SIM = false;
+const simSeen = new Set();
 const fresh = () => ({ chapter: D.start, loc: null, f: {}, v: { turns: 0, miss: 0 }, items: [], seq: {}, done: false, log: [], cards: [], memo: '', seenCards: 0 });
 const ch = () => D.chapters[S.chapter];
 const loc = () => ch().locations[S.loc];
@@ -173,7 +177,7 @@ const fmt = (t, o) => String(t).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] :
 function snapshot(label) {
   return { state: JSON.parse(JSON.stringify(S)), at: Date.now(), label: label || ((ch().label ? ch().label + ' ' : '') + (loc() ? loc().name : '')) };
 }
-function autosave() { if (S) store.set('auto', snapshot()); }
+function autosave() { if (S && !SIM) store.set('auto', snapshot()); }
 
 // ---------- 条件 ----------
 // 例: "has:capsule && !flag:sent"  "var:wait>=1"  "count:talk:haru>=2" は不可（キーは英数字と _ -）
@@ -255,10 +259,11 @@ function resolve(entry, key) {
 // ---------- 表示 ----------
 let typer = null, full = '', toastT;
 const toastLog = [];
-function toast(t) { toastLog.push(t); const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
+function toast(t) { toastLog.push(t); if (SIM) return; const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
 function say(t, meta) {
   if (t == null) return;
   if (S && !(meta && meta.nolog)) S.log.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t });
+  if (SIM) { simSeen.add(t); return; }
   const sp = t.match(/^([^「\n]{1,10})「([\s\S]*)」$/);
   const w = $('who');
   if (sp) { w.textContent = sp[1]; w.classList.add('on'); t = '「' + sp[2] + '」'; } else w.classList.remove('on');
@@ -269,11 +274,13 @@ function say(t, meta) {
 $('msgbox').onclick = () => { if (typer) { clearInterval(typer); typer = null; $('msg').textContent = full; } };
 
 function setScene(bgKey, place, small) {
+  if (SIM) return;
   const src = bgKey && D.assets && D.assets.bg && D.assets.bg[bgKey];
   $('bg').innerHTML = src ? `<img src="${src}" alt="">` : '';
   $('locname').innerHTML = `<small>${small || ''}</small>${place || ''}`;
 }
 function renderScene() {
+  if (SIM) return;
   const L = loc();
   updateNbBadge();
   setScene(L.bg, L.name, ch().label || '現在地');
@@ -289,6 +296,7 @@ const IC = {
   '手帳': '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h5M10 12h5"/>',
 };
 function btns(list, label, mode) {
+  if (SIM) return;
   const c = $('cmd'); c.innerHTML = ''; c.className = mode || (label ? 'list' : '');
   if (label) { const d = document.createElement('div'); d.className = 'label'; d.textContent = label; c.appendChild(d); }
   list.forEach(([t, fn, cls]) => {
@@ -303,7 +311,7 @@ const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 
 // ---------- 行動 ----------
 function main() {
-  if (S.done) return;
+  if (S.done || SIM) return;
   const cmds = [['移動', moveMenu], ['聞く', askMenu], ['調べる', lookMenu], ['見せる', showMenu]];
   if (ch().accuse) cmds.push(['推理', accuseMenu]);
   cmds.push(['手帳', () => openNotebook()]);
@@ -351,6 +359,8 @@ function after() {
   }
   autosave();
   if (p.event) return playEvent(p.event);
+  if (SIM && p.puzzle) { S.simPuzzle = p.puzzle; return; }
+  if (SIM && (p.ending || p.chapter)) { S.simEnd = p.ending ? 'ending:' + p.ending : 'chapter:' + p.chapter; return; }
   if (p.puzzle) return openPuzzle(p.puzzle);
   if (p.ending) return nextBtn(() => ending(p.ending));
   if (p.chapter) return nextBtn(() => startChapter(p.chapter));
@@ -440,16 +450,18 @@ function look(o) {
 function showMenu() {
   if (!S.items.length) { say('見せるものを何も持っていない。'); return; }
   btns([...S.items.map(i => [D.items[i], () => {
-    btns([...here().map(p => [person(p).name, () => {
-      const r = resolve(((ch().show || {})[p] || {})[i], 'show:' + p + ':' + i);
-      act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) }, { p });
-    }]), ['もどる', showMenu, 'back']], D.items[i] + 'をだれに見せる？');
+    btns([...here().map(p => [person(p).name, () => showTo(i, p)]), ['もどる', showMenu, 'back']], D.items[i] + 'をだれに見せる？');
   }]), back], '何を見せる？');
 }
+function showTo(i, p) {
+  const r = resolve(((ch().show || {})[p] || {})[i], 'show:' + p + ':' + i);
+  act(r || { text: fmt(ch().showDefault || D.showDefault || '{name}は、特に心当たりがないようだ。', { name: short(p) }) }, { p });
+}
+const accusable = () => ch().accuse.suspects.filter(p => (S.seq['talk:' + p] || 0) > 0);
 function accuseMenu() {
   const A = ch().accuse;
   // 一度でも話を聞いた人だけが選べる
-  const list = A.suspects.filter(p => (S.seq['talk:' + p] || 0) > 0);
+  const list = accusable();
   if (!list.length) { say(A.noneText || 'まだ、だれにも話を聞いていない。'); return; }
   btns([...list.map(p => [short(p), () => accuse(p)]), back], A.prompt || '犯人はだれだ？');
 }
@@ -459,6 +471,7 @@ function accuse(p) {
     const miss = (A.required || []).filter(x => !cond(x.if)).map(x => '・' + x.label);
     if (miss.length) return act({ text: fmt(A.missingText, { missing: miss.join('\n'), name: short(p) }) });
     autosave();
+    if (SIM) { S.simEnd = 'ending:' + A.ending; return; }
     return ending(A.ending);
   }
   act(resolve((A.wrong || {})[p], 'accuse:' + p) || { text: A.wrongDefault || 'ちがうようだ。', do: ['miss'] });
@@ -468,6 +481,7 @@ function accuse(p) {
 // 章の events: {id: {bg, place, pages: [文...], do: [最後に行う効果]}}
 function playEvent(id) {
   const E = ch().events[id];
+  if (SIM) { E.pages.forEach(t => say(t)); pending = {}; openBefore = openLocs(); run(E.do); return after(); }
   if (E.bg || E.place) setScene(E.bg || loc().bg, E.place || loc().name, ch().label || '現在地');
   let k = 0;
   const next = () => {
@@ -486,10 +500,15 @@ function openPuzzle(id) {
   const draw = () => btns([...'1234567890'.split('').map(d => [d, () => {
     code += d;
     if (code.length < P.length) { say(disp()); draw(); }
-    else if (code === P.answer) act(P.success);
-    else act({ text: fmt(P.fail, { code }) });
+    else puzzleAnswer(id, code);
   }]), ['やめる', () => { say(P.cancel || 'やめた。'); main(); }, 'back']], P.label, 'pad');
   draw();
+}
+
+function puzzleAnswer(id, code) {
+  const P = ch().puzzles[id];
+  S.simPuzzle = null;
+  if (code === P.answer) act(P.success); else act({ text: fmt(P.fail, { code }) });
 }
 
 // ---------- 章 ----------
@@ -641,6 +660,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const placeName = (c, l) => { const C = D.chapters[c]; return (C && C.locations[l] && C.locations[l].name) || ''; };
 const speaker = e => e.p ? person(e.p).name : ((e.t.match(/^([^「\n]{1,10})「/) || [])[1] || '');
 function updateNbBadge() {
+  if (SIM) return;
   const e = $('nbn'); if (!e) return;
   const n = S ? S.cards.length - (S.seenCards || 0) : 0;
   e.textContent = n > 0 ? n : '';
@@ -816,8 +836,51 @@ function preload() {
 const preloaded = [];
 
 window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.remove('leaving'); toTitle(); } });
+// ---------- 検証用（tools/verify.py が使う） ----------
+const sim = {
+  // 章のはじめの状態を作る（prev に前の章の終わりの状態を渡せる）
+  begin(ch_, prev) {
+    SIM = true; S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
+    delete S.simEnd; delete S.simPuzzle;
+    S.chapter = ch_; S.loc = D.chapters[ch_].start.loc; say(D.chapters[ch_].start.text);
+    return JSON.parse(JSON.stringify(S));
+  },
+  set(st) { SIM = true; S = JSON.parse(JSON.stringify(st)); },
+  get() { return JSON.parse(JSON.stringify(S)); },
+  actions() {
+    if (S.simEnd) return [];
+    if (S.simPuzzle) { const P = ch().puzzles[S.simPuzzle]; return [{ t: 'code', id: S.simPuzzle, code: P.answer }, { t: 'code', id: S.simPuzzle, code: P.answer === '0000' ? '1111' : '0000' }]; }
+    const a = [];
+    Object.keys(ch().locations).forEach(k => { if (k !== S.loc && avail(k)) a.push({ t: 'move', k }); });
+    here().forEach(p => { const ts = topicsOf(p); if (ts) ts.forEach(tp => a.push({ t: 'topic', p, tp })); else a.push({ t: 'talk', p }); });
+    Object.keys(loc().objs || {}).forEach(o => a.push({ t: 'look', o }));
+    S.items.forEach(i => here().forEach(p => a.push({ t: 'show', i, p })));
+    if (ch().accuse) accusable().forEach(p => a.push({ t: 'accuse', p }));
+    const cs = ch().contradictions || [];
+    if (cs.length && S.cards.length >= 2) {
+      const ids = S.cards.map((c, i) => c.id || '#' + i);
+      cs.forEach(x => x.pairs.forEach(([u, v]) => { if (ids.includes(u) && ids.includes(v)) a.push({ t: 'contra', ids: [u, v] }); }));
+      a.push({ t: 'contra', ids: [ids[0], ids[1]] });
+    }
+    return a;
+  },
+  apply(x) {
+    switch (x.t) {
+      case 'move': return moveTo(x.k);
+      case 'talk': return talk(x.p);
+      case 'topic': return talkTopic(x.p, x.tp);
+      case 'look': return look(x.o);
+      case 'show': return showTo(x.i, x.p);
+      case 'accuse': return accuse(x.p);
+      case 'contra': return contradict(x.ids);
+      case 'code': return puzzleAnswer(x.id, x.code);
+    }
+  },
+  seen: () => [...simSeen],
+};
+
 document.title = D.title;
-window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
+window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();

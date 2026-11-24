@@ -1,0 +1,3 @@
+{"id":"test-deadend","title":"詰みのテスト","start":"ch1","chapters":["ch1"],"titleScreen":{"title":"詰み"},
+ "items":{},"people":{"a":{"name":"A"}},
+ "endings":{"end":{"pages":["おわり"],"ranks":[{"label":""}],"result":"完","clear":false}}}

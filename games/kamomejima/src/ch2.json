@@ -159,7 +159,7 @@
       "topics": {
         "hint": [
           {
-            "if": "!flag:found",
+            "if": "!flag:found && !here:corridor",
             "hints": [
               "鷹宮「…なんや、騒がしいな」",
               "鷹宮「下で誰かが叫んでる。磯村さんの声や」",
@@ -167,7 +167,7 @@
             ]
           },
           {
-            "if": "!flag:opened",
+            "if": "!flag:found",
             "hints": [
               "鷹宮「扉が開かへんのか」",
               "鷹宮「磯村さんと話してみ」",

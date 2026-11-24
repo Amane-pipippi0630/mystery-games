@@ -1,0 +1,8 @@
+{"id":"ch1","label":"","title":"詰み","card":false,"start":{"loc":"room","text":"部屋にいる。"},
+ "locations":{
+  "room":{"name":"部屋","people":["a"],"objs":{"door":"扉","vase":"花瓶"}},
+  "exit":{"name":"出口","unlock":"flag:key && !flag:broken","people":[],"objs":{"gate":"門"}}},
+ "talk":{"a":"A「花瓶は割らないで。鍵は扉のそばにあるよ」"},
+ "look":{"door":{"text":"扉のそばに鍵があった。","do":["flag:key"]},
+   "vase":{"text":"花瓶を割ってしまった。出口が崩れた。","do":["flag:broken"]},
+   "gate":{"text":"外へ出た。","do":["ending:end"]}}}
