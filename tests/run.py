@@ -518,11 +518,65 @@ def kamomejima_ch5(b):
     click(pg, "移動", "談話室")
     for p in ["タキ", "玲子", "圭", "沙耶", "三島"]:
         ask(pg, p, "昨夜のこと")
-    for _ in range(6):
+    for _ in range(7):
         click(pg, "つぎへ")
-    for _ in range(3):
+    assert "第六章" in pg.locator("#card").inner_text()   # 第6章へ続く
+    return pg.errs
+
+
+@test
+def kamomejima_ch6_to_end(b):
+    """鴎島館 第6〜8章：手帳の謎を切り分け、圭のうそ（矛盾）、内線の記録、推理ボード、指名、解決編、クリアで⭐️"""
+    pg = page(b, KAMO)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    # 第2章で手に入る圭のカードを持って第6章を始める
+    pg.evaluate("""() => { const S = window.__mg.state; S.cards.push({ id: 'kei_sleep', c: 'ch2', l: 'salon', p: 'kei', t: '停電中は本館2階の自室で寝ていた。停電にも気づかなかった', pin: false });
+      ['taki','reiko','kei','saya','isomura','mishima'].forEach(p => S.seq['talk:' + p] = 1);
+      window.__mg.startChapter('ch6'); }""")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    ask(pg, "鷹宮")
+    for _ in range(4):
         click(pg, "つぎへ")
-    assert "第5章 おわり" in msg(pg)
+    ask(pg, "三島")
+    click(pg, "移動", "執事室"); ask(pg, "磯村"); click(pg, "調べる", "内線の交換台")
+    click(pg, "移動", "玄関ホール"); ask(pg, "沙耶"); ask(pg, "沙耶", "停電のあいだ")
+    click(pg, "移動", "大食堂")
+    contra(pg, "自室で寝ていた", "誰もいなかった")
+    assert state(pg)["f"].get("contra_m1")
+    click(pg, "移動", "談話室")
+    for _ in range(5):
+        click(pg, "つぎへ")
+    # 第7章：読者への挑戦 → 推理ボード
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    for _ in range(5):
+        click(pg, "つぎへ")
+    pg.wait_for_selector("#modal .board")
+    for label in ["手帳を探していた", "書庫の資料"]:              # まちがった条件 → 三島ひとり
+        pg.click(f"#modal .board .row:has-text('{label}')")
+    assert pg.locator("#modal .b-sus span:not(.out)").all_inner_texts() == ["三島"]
+    pg.click("#modal >> text=この条件で推理する")
+    assert "ほんまに犯人の条件か" in msg(pg) and state(pg)["v"]["miss"] == 1
+    ask(pg, "鷹宮")
+    for label in ["西棟にいることができた", "遺言書を持っていると知っていた", "存在を知らなかった", "アリバイがない"]:
+        pg.click(f"#modal .board .row:has-text('{label}')")
+    assert pg.locator("#modal .b-sus span:not(.out)").all_inner_texts() == ["圭"]
+    pg.click("#modal >> text=この条件で推理する")
+    assert state(pg)["f"].get("board_done")
+    click(pg, "推理", "三島")
+    assert state(pg)["v"]["miss"] == 2
+    click(pg, "推理", "圭"); click(pg, "つぎへ")
+    # 終章：解決編
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    for _ in range(15):
+        click(pg, "つぎへ")
+    assert state(pg)["f"].get("solved")
+    click(pg, "移動", "客室"); click(pg, "調べる", "鞄")
+    click(pg, "移動", "テラス")
+    for _ in range(12):
+        click(pg, "つぎへ")
+    m = msg(pg)
+    assert "鴎島館の論理 完" in m and "評価：鋭い推理作家" in m, m
+    assert "kamomejima" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')")
     return pg.errs
 
 

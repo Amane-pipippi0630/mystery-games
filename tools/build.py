@@ -21,7 +21,7 @@ BG_QUALITY = 80      # WebPの画質
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
 TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
-EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card"}
+EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card", "board"}
 
 
 class Checker:
@@ -74,6 +74,8 @@ class Checker:
                 self.err(where, f"エンディング {a} はありません")
             elif k == "chapter" and a not in self.g["chapters"]:
                 self.err(where, f"章 {a} はありません")
+            elif k == "board" and a not in ch.get("boards", {}):
+                self.err(where, f"推理ボード {a} はありません")
             elif k == "event" and a not in ch.get("events", {}):
                 self.err(where, f"イベント {a} はありません")
             elif k == "card" and ":" not in a:
@@ -221,6 +223,21 @@ def check(g):
                         c.err(wx, f"証言カード {cid_} がありません（cardId を付けたルールが必要）")
             c.cond(wx, x.get("if"), ch)
             c.effects(wx, x.get("do"), ch)
+        for bid, B in ch.get("boards", {}).items():
+            ids = [x["id"] for x in B["conditions"]]
+            for x in B["conditions"]:
+                for p_ in x["keeps"]:
+                    if p_ not in B["suspects"]:
+                        c.err(f"{w}.boards.{bid}", f"条件 {x['id']} の {p_} が suspects にありません")
+            left = [p_ for p_ in B["suspects"] if all(p_ in x["keeps"] for x in B["conditions"] if x.get("correct"))]
+            if left != [B["culprit"]]:
+                c.err(f"{w}.boards.{bid}", f"正しい条件をすべて選んだときに残るのが {left} で、犯人 {B['culprit']} ひとりになりません")
+            for x in B["conditions"]:
+                if not x.get("correct") and B["culprit"] in x["keeps"]:
+                    c.err(f"{w}.boards.{bid}", f"まちがった条件 {x['id']} に犯人が当てはまっています（まちがいを選んでも犯人が残ってしまう）")
+                if x.get("correct") and B["culprit"] not in x["keeps"]:
+                    c.err(f"{w}.boards.{bid}", f"正しい条件 {x['id']} に犯人が当てはまっていません")
+            c.rule(f"{w}.boards.{bid}.success", B["success"], ch)
         A = ch.get("accuse")
         if A:
             for p in A["suspects"]:
@@ -228,8 +245,10 @@ def check(g):
                     c.err(f"{w}.accuse", f"人物 {p} は people にありません")
             if A["culprit"] not in A["suspects"]:
                 c.err(f"{w}.accuse", "culprit が suspects に入っていません")
-            if A["ending"] not in g.get("endings", {}):
-                c.err(f"{w}.accuse", f"エンディング {A['ending']} はありません")
+            if A.get("do"):
+                c.effects(f"{w}.accuse.do", A["do"], ch)
+            elif A.get("ending") not in g.get("endings", {}):
+                c.err(f"{w}.accuse", f"エンディング {A.get('ending')} はありません")
             for i, r in enumerate(A.get("required", [])):
                 c.cond(f"{w}.accuse.required[{i}]", r["if"], ch)
             for p, e in A.get("wrong", {}).items():

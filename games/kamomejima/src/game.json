@@ -8,12 +8,15 @@
     "ch2",
     "ch3",
     "ch4",
-    "ch5"
+    "ch5",
+    "ch6",
+    "ch7",
+    "ch8"
   ],
   "titleScreen": {
     "eyebrow": "汐見ミステリー 第一作",
     "title": "鴎島館の<br>論理",
-    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第5章まで遊べる試作版）</small>"
+    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。"
   },
   "prologue": {
     "eyebrow": "PROLOGUE",
@@ -104,100 +107,31 @@
     }
   },
   "endings": {
-    "ch1end": {
-      "bg": "salon",
-      "place": "談話室",
-      "small": "第一章",
+    "main": {
+      "bg": "terrace",
+      "place": "テラス",
+      "small": "終章",
       "pages": [
-        "第1章「鴎島へ」 おわり",
-        "――翌朝、閂のかかった書庫で、ひとりの死体が見つかる。\n\n（第2章「書庫の密室」へつづく）"
+        "こうして、鴎島の二つの事件は幕を閉じた。",
+        "手帳の続きは、また別の物語になる。\n\n――汐見ミステリー 第二作『振り子の止まる夜』へ"
       ],
-      "finalBg": "island",
-      "finalPlace": "つづく",
-      "finalSmall": "試作版",
+      "finalBg": "terrace",
+      "finalPlace": "鴎島館の論理",
+      "finalSmall": "完",
       "ranks": [
         {
-          "label": ""
-        }
-      ],
-      "result": "～ 第1章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件\n\nこの章は試作です。遊んだ時間と、長すぎた・短すぎたところを教えてください。",
-      "clear": false
-    },
-    "ch2end": {
-      "bg": "library",
-      "place": "書庫",
-      "small": "第二章",
-      "pages": [
-        "第2章「書庫の密室」 おわり",
-        "――密室を作ったのは、誰なのか。\n\n（第3章「鷹宮の講義」へつづく）"
-      ],
-      "finalBg": "island",
-      "finalPlace": "つづく",
-      "finalSmall": "試作版",
-      "clear": false,
-      "ranks": [
+          "if": "var:miss==0 && var:hints<=10",
+          "label": "名探偵"
+        },
         {
-          "label": ""
-        }
-      ],
-      "result": "～ 第2章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件\n\nこの章は試作です。遊んだ時間と、分かりにくかったところを教えてください。"
-    },
-    "ch3end": {
-      "bg": "library",
-      "place": "書庫",
-      "small": "第三章",
-      "pages": [
-        "第3章「鷹宮の講義」 おわり",
-        "――浅見は、死ぬ前に何を隠したのか。\n\n（第4章「隠し金庫」へつづく）"
-      ],
-      "finalBg": "island",
-      "finalPlace": "つづく",
-      "finalSmall": "試作版",
-      "clear": false,
-      "ranks": [
+          "if": "var:miss<=2",
+          "label": "鋭い推理作家"
+        },
         {
-          "label": ""
+          "label": "がんばった推理作家"
         }
       ],
-      "result": "～ 第3章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n矛盾をついてまちがえた回数：{miss}回"
-    },
-    "ch4end": {
-      "bg": "corridor",
-      "place": "本館2階の廊下",
-      "small": "第四章",
-      "pages": [
-        "第4章「隠し金庫」 おわり",
-        "――その夜、二人目の死者が出る。\n\n（第5章「崖の灯台」へつづく）"
-      ],
-      "finalBg": "cliff",
-      "finalPlace": "つづく",
-      "finalSmall": "試作版",
-      "clear": false,
-      "ranks": [
-        {
-          "label": ""
-        }
-      ],
-      "result": "～ 第4章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件"
-    },
-    "ch5end": {
-      "bg": "cliff",
-      "place": "灯台の崖",
-      "small": "第五章",
-      "pages": [
-        "第5章「崖の灯台」 おわり",
-        "――この館には、謎が二つある。\n\n（第6章「二つの謎」へつづく）"
-      ],
-      "finalBg": "island",
-      "finalPlace": "つづく",
-      "finalSmall": "試作版",
-      "clear": false,
-      "ranks": [
-        {
-          "label": ""
-        }
-      ],
-      "result": "～ 第5章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回"
+      "result": "～ 鴎島館の論理 完 ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\nまちがえた回数：{miss}回\n取材ノート：{notes}件\n評価：{rank}\n\n遊んでくれてありがとう！"
     }
   },
   "topics": {
