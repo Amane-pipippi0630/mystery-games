@@ -14,6 +14,7 @@ EXTRAS = (ROOT / "tests/fixtures/extras/index.html").as_uri()
 HUB = (ROOT / "index.html").as_uri()
 KAMO = (ROOT / "games/kamomejima/index.html").as_uri()
 FURI = (ROOT / "games/furiko/index.html").as_uri()
+FUYU = (ROOT / "games/fuyu-shiomi/index.html").as_uri()
 results = []
 
 
@@ -329,7 +330,7 @@ def hub(b):
     pg = hub_page(b)
     assert pg.locator(".game").count() == 4
     assert pg.locator(".game[data-id=epilogue]").count() == 0
-    assert pg.locator(".game.soon").count() == 2  # 第二作・第三作（第一作は試作版を公開中）
+    assert pg.locator(".game.soon").count() == 0  # 三部作はすべて遊べる
     pg.click(".game[data-id=shiomi-port]")
     pg.wait_for_selector("#title:not(.hide)")
     pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "移動", "居間")
@@ -599,7 +600,7 @@ def conditions(b):
 
 @test
 def extras_think_choice_doc(b):
-    """考える・選択式の問い・資料タブ・章ごとの助手が動く"""
+    """考える・選択式の問い・資料タブ・章ごとの助手・記事の検索が動く"""
     pg = page(b, EXTRAS)
     pg.click("text=はじめから"); pg.click("#card")
     assert pg.locator("#cmd button", has_text="推理").count() == 0
@@ -615,6 +616,10 @@ def extras_think_choice_doc(b):
     assert pg.locator("#cmd button", has_text="正解").count() == 1   # もう一度選び直せる
     click(pg, "正解"); click(pg, "つぎへ"); pg.click("#card")
     click(pg, "聞く", "助手A"); assert "Xに聞いてみて" in msg(pg)   # 章ごとの助手
+    click(pg, "調べる", "縮刷版")
+    pg.fill("#sq", "汐見"); click(pg, "探す"); assert "「汐見」の記事はない" in msg(pg)
+    pg.fill("#sq", "久我 海運"); click(pg, "探す"); assert "新社屋" in msg(pg)   # 空白は無視
+    assert state(pg)["f"].get("found")
     click(pg, "聞く", "人物X"); click(pg, "推理", "X")
     st = state(pg); assert st["v"]["miss"] == 1 and st["v"]["hints"] == 4, st["v"]
     return pg.errs
@@ -669,6 +674,46 @@ def furiko_ch8_end(b):
     assert "完" in msg(pg)
     assert state(pg)["v"]["miss"] == 2
     assert "furiko" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
+    return pg.errs
+
+
+@test
+def fuyu_ch2_search(b):
+    """冬の汐見 第2章：切り抜きを三島に見せ、縮刷版を言葉で探すと記事が見つかる"""
+    pg = page(b, FUYU)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("() => { const m = window.__mg; m.state.items.push('kirinuki', 'photo'); m.startChapter('ch2'); }")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "見せる", "新聞の切り抜き", "三島透"); assert "10月8日" in msg(pg)
+    click(pg, "移動", "汐見日報"); click(pg, "調べる", "縮刷版")
+    pg.fill("#sq", "東京"); click(pg, "探す"); assert "見つからなかった" in msg(pg)
+    pg.fill("#sq", "10月8日"); click(pg, "探す"); assert "新社屋落成" in msg(pg)
+    st = state(pg); assert st["f"].get("article") and st["v"]["searches"] == 2
+    return pg.errs
+
+
+@test
+def fuyu_ch8_end(b):
+    """冬の汐見 第8章：浜で佐伯と話し、指名→「名前」の問い→クリアで⭐️"""
+    pg = page(b, FUYU)
+    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.evaluate("""() => { const m = window.__mg; m.startChapter('ch8');
+      ['kuga','kuroda','nonomura','gondo','shujin'].forEach(p => m.state.seq['talk:' + p] = 1); }""")
+    pg.click("#card"); pg.click("#modal >> text=つづける")
+    for _ in range(5):
+        click(pg, "つぎへ")
+    click(pg, "推理", "久我"); assert "伝えなければ" in msg(pg)
+    click(pg, "聞く", "佐伯修", "昭和16年の火事"); click(pg, "聞く", "佐伯修", "引き揚げ船のこと"); click(pg, "聞く", "佐伯修", "2月10日の夜")
+    click(pg, "推理", "黒田"); click(pg, "推理", "久我")
+    for _ in range(8):
+        click(pg, "つぎへ")
+    click(pg, "盗んだ"); click(pg, "託された")
+    for _ in range(30):
+        if pg.locator("#cmd button", has_text="タイトルへ").count():
+            break
+        click(pg, "つぎへ")
+    assert "完" in msg(pg) and state(pg)["v"]["miss"] == 2
+    assert "fuyu-shiomi" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
     return pg.errs
 
 

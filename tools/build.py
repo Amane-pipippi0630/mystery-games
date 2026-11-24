@@ -21,7 +21,7 @@ BG_QUALITY = 80      # WebPの画質
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TOK = re.compile(r"\s*(\|\||&&|!|\(|\)|true|false|[a-z]+:[A-Za-z0-9_\-]+(?:\s*(?:>=|<=|==|!=|>|<)\s*-?\d+)?)")
 TERM = re.compile(r"^([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?$")
-EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card", "board", "choice", "doc"}
+EFFECTS = {"give", "take", "flag", "unflag", "set", "inc", "miss", "toast", "goto", "puzzle", "ending", "chapter", "event", "card", "board", "choice", "doc", "search"}
 
 
 class Checker:
@@ -78,6 +78,8 @@ class Checker:
                 self.err(where, f"推理ボード {a} はありません")
             elif k == "choice" and a not in ch.get("choices", {}):
                 self.err(where, f"選択式の問い {a} はありません")
+            elif k == "search" and a not in ch.get("searches", {}):
+                self.err(where, f"記事の検索 {a} はありません")
             elif k == "doc" and a not in self.g.get("docs", {}):
                 self.err(where, f"資料 {a} は game.json の docs にありません")
             elif k == "event" and a not in ch.get("events", {}):
@@ -252,6 +254,11 @@ def check(g):
                 if not o.get("label"):
                     c.err(f"{w}.choices.{qid}[{i}]", "label がありません")
                 c.rule(f"{w}.choices.{qid}[{i}]", o, ch)
+        for sid, Q in ch.get("searches", {}).items():
+            for i, e in enumerate(Q.get("entries", [])):
+                if not e.get("keys"):
+                    c.err(f"{w}.searches.{sid}[{i}]", "keys がありません")
+                c.rule(f"{w}.searches.{sid}[{i}]", e, ch)
         if "think" in ch:
             c.entry(f"{w}.think", ch["think"], ch)
         if ch.get("assistant") and ch["assistant"] not in g["people"]:

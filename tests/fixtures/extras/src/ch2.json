@@ -1,5 +1,73 @@
-{"id": "ch2", "label": "第二章", "title": "ふたり", "assistant": "a", "assistantHint": "A「{name}に聞いてみて」",
- "start": {"loc": "hall", "text": "Aと一緒だ。"},
- "locations": {"hall": {"name": "広間", "people": ["a", "x"], "objs": {}}},
- "talk": {"a": "A「ふつうの話」", "x": {"text": "X「犯人は自分だ」", "card": true}},
- "accuse": {"suspects": ["a", "x"], "culprit": "x", "ending": "end", "wrong": {"a": {"text": "ちがう", "do": ["miss"]}}}}
+{
+ "id": "ch2",
+ "label": "第二章",
+ "title": "ふたり",
+ "assistant": "a",
+ "assistantHint": "A「{name}に聞いてみて」",
+ "start": {
+  "loc": "hall",
+  "text": "Aと一緒だ。"
+ },
+ "locations": {
+  "hall": {
+   "name": "広間",
+   "people": [
+    "a",
+    "x"
+   ],
+   "objs": {
+    "paper": "縮刷版"
+   }
+  }
+ },
+ "talk": {
+  "a": "A「ふつうの話」",
+  "x": {
+   "text": "X「犯人は自分だ」",
+   "card": true
+  }
+ },
+ "accuse": {
+  "suspects": [
+   "a",
+   "x"
+  ],
+  "culprit": "x",
+  "ending": "end",
+  "wrong": {
+   "a": {
+    "text": "ちがう",
+    "do": [
+     "miss"
+    ]
+   }
+  }
+ },
+ "look": {
+  "paper": {
+   "text": "縮刷版をめくる。",
+   "do": [
+    "search:s"
+   ]
+  }
+ },
+ "searches": {
+  "s": {
+   "label": "記事を探す",
+   "prompt": "何の記事を探す？",
+   "entries": [
+    {
+     "keys": [
+      "久我",
+      "新社屋"
+     ],
+     "text": "久我海運の新社屋の記事があった。",
+     "do": [
+      "flag:found"
+     ]
+    }
+   ],
+   "none": "「{q}」の記事はない。"
+  }
+ }
+}
