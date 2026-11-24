@@ -6,12 +6,13 @@
   "chapters": [
     "ch1",
     "ch2",
-    "ch3"
+    "ch3",
+    "ch4"
   ],
   "titleScreen": {
     "eyebrow": "汐見ミステリー 第一作",
     "title": "鴎島館の<br>論理",
-    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第3章まで遊べる試作版）</small>"
+    "lead": "嵐で孤立した島の洋館。<br>閂のかかった書庫で、弁護士が死んでいた。<br><small>（第4章まで遊べる試作版）</small>"
   },
   "prologue": {
     "eyebrow": "PROLOGUE",
@@ -66,7 +67,10 @@
   "assistantHint": "鷹宮「{name}さん、まだ何か話してくれそうやで。いろんな話題で聞いてみ」",
   "talkDefault": "{name}は、いまは話す気がなさそうだ。",
   "items": {
-    "file": "空の革のファイル"
+    "file": "空の革のファイル",
+    "will": "遺言書",
+    "box": "鍵付きの小箱",
+    "techou": "鳶色の手帳"
   },
   "people": {
     "takamiya": {
@@ -154,6 +158,25 @@
         }
       ],
       "result": "～ 第3章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n矛盾をついてまちがえた回数：{miss}回"
+    },
+    "ch4end": {
+      "bg": "corridor",
+      "place": "本館2階の廊下",
+      "small": "第四章",
+      "pages": [
+        "第4章「隠し金庫」 おわり",
+        "――その夜、二人目の死者が出る。\n\n（第5章「崖の灯台」へつづく）"
+      ],
+      "finalBg": "cliff",
+      "finalPlace": "つづく",
+      "finalSmall": "試作版",
+      "clear": false,
+      "ranks": [
+        {
+          "label": ""
+        }
+      ],
+      "result": "～ 第4章 おわり ～\n\nプレイ時間：{time}\n行動回数：{turns}\n鷹宮への相談：{hints}回\n取材ノート：{notes}件"
     }
   },
   "topics": {
