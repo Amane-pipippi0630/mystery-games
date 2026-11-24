@@ -176,3 +176,15 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 - **スロット1〜3**：メニューから手動で保存
 
 保存先はブラウザの localStorage（`mg:<ゲームid>:...`）。クリアしたゲームは `mg:cleared` に記録される（タイトル画面の⭐️に使う）。
+
+## 第二作で足した機能
+
+| 機能 | 書き方 |
+|---|---|
+| 章ごとの助手 | 章に `"assistant": "人物id"`、`"assistantHint"`、`"hintTopic"` を書くと、game.json の設定より優先する。`"assistant": null` で助手なし |
+| 考える | 章に `"think": ルール`（`hints` も使える）を書くと、コマンドに「考える」が出る。まず `thinkHint`（`{name}` 入り）で聞き残しを教え、なければ think の文。助手のいない章（倒叙の犯人視点など）のヒント役 |
+| 選択式の問い | 章に `"choices": {id: {prompt, label, options: [{label, text, do}]}}`。効果 `choice:id` で出す。まちがいは `do` に `"miss", "choice:id"` で選び直し。選ぶ前に「手帳を見る」で資料を見返せる |
+| 資料 | game.json に `"docs": {id: {title, text}}`。効果 `doc:id` で手帳の「資料」タブに加わる（表や数字を見ながら謎を解く用） |
+| 手帳の名前 | game.json か章に `"nbTitle"`（既定は「捜査手帳」） |
+| 答えの幅 | 謎解きに `"answers": ["1740", "1745", "1750"]` を書くと、answer のほかにも正解にする（計算の丸めの違いを許す） |
+| 視点の切り替え | 章に `"freshNotebook": true` を書くと、その章のはじめに証言カード・もちもの・資料を空にする（会話ログとメモは残る）。倒叙で犯人側から刑事側へ移るとき用 |
