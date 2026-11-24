@@ -24,4 +24,10 @@ python3 tools/build_hub.py          # hub/hub.json から作品選択ページ�
 python3 tools/build.py tests/fixtures/mini && python3 tests/run.py   # 動作テスト（Playwright）
 ```
 
+章を作ったときの検証（詰み・バグ・矛盾）は [docs/verification.md](docs/verification.md) の手順で行います。
+
+```sh
+python3 tools/verify.py kamomejima   # 詰み・エラー・行き止まりの文
+```
+
 `games/<id>/index.html` は組み立てた結果なので、直接編集せず `src/` を直してください。

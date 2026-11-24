@@ -435,6 +435,18 @@ def kamomejima_ch2(b):
 
 
 @test
+def verify_finds_deadend(b):
+    """検証ツールは、わざと詰むシナリオの詰みを見つけ、汐見港では問題なしと言う"""
+    import subprocess
+    v = lambda g: subprocess.run(["python3", str(ROOT / "tools/verify.py"), g], capture_output=True, text=True, timeout=600)
+    r = v(str(ROOT / "tests/fixtures/deadend"))
+    assert r.returncode == 1 and "✗ 詰み" in r.stdout and "vase" in r.stdout, r.stdout
+    r = v("shiomi-port")
+    assert r.returncode == 0 and "結果：問題なし" in r.stdout, r.stdout
+    return []
+
+
+@test
 def conditions(b):
     """条件式の評価"""
     pg = page(b, MINI)
@@ -450,6 +462,9 @@ def conditions(b):
 
 
 if __name__ == "__main__":
+    import subprocess
+    for f in ["tests/fixtures/mini", "tests/fixtures/deadend"]:
+        subprocess.run(["python3", str(ROOT / "tools/build.py"), str(ROOT / f)], check=True, capture_output=True)
     ok = 0
     with sync_playwright() as p:
         b = p.chromium.launch()
