@@ -63,7 +63,6 @@
   "hanken": "切符の半券",
   "kirinuki": "新聞の切り抜き",
   "meishi": "久我の名刺",
-  "kaban": "源次の手提げ",
   "photo": "源次の写真",
   "kiroku": "引き揚げ船の記録の写し",
   "chosho": "昭和16年の調書"
@@ -163,9 +162,6 @@
   "saeki": {
    "name": "佐伯修",
    "short": "佐伯"
-  },
-  "isomura": {
-   "name": "書生"
   }
  },
  "topics": {

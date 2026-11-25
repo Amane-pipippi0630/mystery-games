@@ -129,13 +129,13 @@
  "accuse": {
   "prompt": "戸川源次を殺したのは、誰だ？",
   "suspects": [
-   "kuga",
+   "saeki",
    "kuroda",
    "nonomura",
    "gondo",
    "shujin"
   ],
-  "culprit": "kuga",
+  "culprit": "saeki",
   "required": [
    {
     "if": "flag:s_kaji",
