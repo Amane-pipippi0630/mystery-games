@@ -11,7 +11,7 @@ games/<id>/src/ に game.json・章ごとの <章id>.json・bg/<名前>.jpg を�
 エンジン（engine/）とシナリオはHTMLに埋め込み、背景は幅1280pxのWebPにして
 games/<id>/bg/ に書き出す。背景は起動時にまとめて読み込むので、遊んでいる間は通信しない。
 """
-import base64, io, json, re, shutil, sys
+import base64, hashlib, io, json, re, shutil, sys
 from pathlib import Path
 from PIL import Image
 
@@ -148,6 +148,11 @@ def check_audio(c, g):
     if not A:
         return
     adir = ROOT / "audio"
+    # 音のファイルを差し替えたら URL も変わるようにする（ブラウザに古い音が残らないように）
+    h = hashlib.md5()
+    for f in sorted(adir.glob("*.m4a")):
+        h.update(f.name.encode()); h.update(f.read_bytes())
+    A["v"] = h.hexdigest()[:8]
     def need(where, n):
         if n and not (adir / f"{n}.m4a").exists():
             c.err(where, f"音 {n} が audio/ にありません")
