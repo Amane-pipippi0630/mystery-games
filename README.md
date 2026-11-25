@@ -30,6 +30,8 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py   # 動作テ
 python3 tools/verify.py kamomejima   # 詰み・エラー・行き止まりの文
 ```
 
+各作品のどの章で何が起きるかは [docs/chapters.md](docs/chapters.md) にまとめてあります（ネタバレ全開）。
+
 `games/<id>/index.html` は組み立てた結果なので、直接編集せず `src/` を直してください。
 
 ## 遊ぶ
