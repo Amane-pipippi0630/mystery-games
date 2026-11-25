@@ -405,12 +405,15 @@ def buttons(pg):
 
 @test
 def ask_stays_in_menu(b):
-    """聞いたあとは「だれに聞く？」や同じ人の話題に残り、もどるで上に戻れる"""
+    """聞いたあとは「だれに聞く？」や同じ人の話題に、調べたあとは「何を調べる？」に残り、もどるで上に戻れる"""
     pg = new_shiomi(b)
     click(pg, "移動", "居間"); click(pg, "聞く", "沙織"); advance(pg)
     bs = buttons(pg)
     assert any("沙織" in t for t in bs) and any("ハル" in t for t in bs) and "移動" not in " ".join(bs), bs
     click(pg, "もどる"); assert any("移動" in t for t in buttons(pg))
+    click(pg, "調べる", "写真立て"); advance(pg)                     # 調べたあとも「何を調べる？」に残る
+    bs = buttons(pg)
+    assert any("写真立て" in t for t in bs) and "移動" not in " ".join(bs), bs
     pg = page(b, FURI)
     pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     pg.evaluate("() => window.__mg.startChapter('ch8')")
