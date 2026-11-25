@@ -70,15 +70,18 @@ function card(g, opt = {}) {
   const auto = get('mg:' + g.id + ':auto');
   const cont = auto && auto.state && !auto.state.done;
   const soon = g.status !== 'play';
+  // 前の作品をクリアするまで開かない（hub.json の requires）
+  const need = g.requires && !cleared.includes(g.requires) ? H.games.find(x => x.id === g.requires) : null;
+  if (need) { opt.locked = true; opt.msg = `『${need.title}』をクリアすると開きます`; opt.showTitle = true; }
   b.className = 'game' + (soon ? ' soon' : '') + (opt.locked ? ' locked' : '') + (opt.epi ? ' epi' : '');
   b.dataset.id = g.id;
   const badges = [done ? '<span class="clear">⭐️ クリア</span>' : '', cont ? '<span>つづきあり</span>' : '', soon && !opt.locked ? '<span class="wait">準備中</span>' : ''].join('');
   b.innerHTML = `<div class="img" style="${g.thumbUrl ? `background-image:url('${g.thumbUrl}')` : ''}"></div>
     <div class="badges">${badges}</div>
     <div class="body">${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="era">${esc(g.era || '')}</span>
-    <h2>${esc(opt.locked ? '？？？' : g.title)}</h2><p>${esc(opt.locked ? `三部作をすべてクリアすると開きます（${triDone}/${trilogy.length}）` : g.lead)}</p></div>`;
+    <h2>${esc(opt.locked && !opt.showTitle ? '？？？' : g.title)}</h2><p>${esc(opt.locked ? (opt.msg || `三部作をすべてクリアすると開きます（${triDone}/${trilogy.length}）`) : g.lead)}</p></div>`;
   b.onclick = () => {
-    if (opt.locked) return toast('三部作をすべてクリアすると開きます');
+    if (opt.locked) return toast(opt.msg || '三部作をすべてクリアすると開きます');
     if (soon) return toast('ただいま準備中です');
     b.classList.add('going'); document.querySelectorAll('.game').forEach(x => x.disabled = true);
     setTimeout(() => { location.href = g.path; }, 150);

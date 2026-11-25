@@ -1,6 +1,6 @@
 {
  "id": "furiko",
- "title": "振り子の止まる夜（仮）",
+ "title": "振り子の止まる夜",
  "hub": "../../index.html",
  "start": "ch1",
  "chapters": [
@@ -187,5 +187,11 @@
    ],
    "result": "～ 振り子の止まる夜 完 ～\n\nプレイ時間：{time}\n行動回数：{turns}\n相談した回数：{hints}回\nまちがえた回数：{miss}回\n評価：{rank}\n\n遊んでくれてありがとう！"
   }
- }
+ },
+ "requires": [
+  {
+   "id": "kamomejima",
+   "title": "鴎島館の論理"
+  }
+ ]
 }

@@ -615,6 +615,15 @@ function toTitle() {
   const a = store.get('auto');
   t.innerHTML = `<div class="eyebrow">${T.eyebrow || ''}</div><h1>${T.title}</h1><p>${T.lead || ''}</p>`;
   const add = (label, fn, cls) => { const b = document.createElement('button'); b.className = 'big' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = fn; t.appendChild(b); };
+  // 前の作品をクリアしていないと遊べない（game.json の requires: [{id, title}]）。URL を直接開いたとき用
+  let cl = []; try { cl = JSON.parse(localStorage.getItem('mg:cleared') || '[]'); } catch (e) {}
+  const need = (D.requires || []).filter(r => !cl.includes(r.id));
+  if (need.length) {
+    t.insertAdjacentHTML('beforeend', `<p class="lock">${need.map(r => '『' + r.title + '』').join('・')}をクリアすると遊べます。</p>`);
+    if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget), 'primary');
+    t.classList.remove('hide');
+    return;
+  }
   add('はじめから', newGame, 'primary');
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));

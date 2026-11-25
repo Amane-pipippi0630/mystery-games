@@ -4,6 +4,7 @@
   python3 tools/build.py shiomi-port && python3 tools/build.py tests/fixtures/mini
   python3 tests/run.py
 """
+import json
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -24,8 +25,12 @@ def test(fn):
     return fn
 
 
-def page(b, url):
+def page(b, url, cleared=None):
     ctx = b.new_context(viewport={"width": 390, "height": 844})
+    if cleared is None and any(k in url for k in ("furiko", "fuyu-shiomi", "epilogue")):
+        cleared = ["kamomejima", "furiko", "fuyu-shiomi"]   # 前の作品をクリアした状態で遊ぶ
+    if cleared:
+        ctx.add_init_script(f"if (!localStorage.getItem('mg:cleared')) localStorage.setItem('mg:cleared', '{json.dumps(cleared)}')")
     pg = ctx.new_page()
     errs, reqs = [], []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -793,6 +798,22 @@ def epilogue_clear(b):
     assert len(state(pg)["docs"]) == 7
     assert "汐見ミステリー 完" in msg(pg)
     return pg.errs
+
+@test
+def sequential_unlock(b):
+    """前の作品をクリアしないと次の作品は開かない（作品選択とタイトル画面の両方）"""
+    pg = hub_page(b); pg.evaluate("localStorage.setItem('mg:cleared','[]')"); pg.reload()
+    furi = pg.locator('.game[data-id="furiko"]')
+    assert "locked" in furi.get_attribute("class") and "鴎島館の論理』をクリア" in furi.inner_text()
+    assert "locked" not in pg.locator('.game[data-id="kamomejima"]').get_attribute("class")
+    pg2 = page(b, FURI, cleared=["shiomi-port"])
+    assert "鴎島館の論理』をクリアすると遊べます" in pg2.inner_text("#title")
+    assert pg2.locator("#title button", has_text="はじめから").count() == 0
+    pg3 = hub_page(b); pg3.evaluate("""localStorage.setItem('mg:cleared','["kamomejima"]')"""); pg3.reload()
+    assert "locked" not in pg3.locator('.game[data-id="furiko"]').get_attribute("class")
+    assert "locked" in pg3.locator('.game[data-id="fuyu-shiomi"]').get_attribute("class")
+    return pg.errs + pg2.errs + pg3.errs
+
 
 if __name__ == "__main__":
     import subprocess
