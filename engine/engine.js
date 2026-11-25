@@ -198,7 +198,7 @@ const snd = (() => {
   const save = () => { try { localStorage.setItem('mg:sound', JSON.stringify(vol)); } catch (e) {} };
   const anyOn = () => vol.bgm + vol.amb + vol.se > 0;
   const VOL = { bgm: 0.5, bgmUnder: 0.38, amb: 0.85, se: 0.7 };
-  const url = n => A.base + n + '.m4a';
+  const url = n => A.base + n + '.m4a' + (A.v ? '?v=' + A.v : '');
   function track(n, loop) {
     if (tracks[n]) return tracks[n];
     const el = new Audio(url(n)); el.loop = loop; el.preload = 'auto';
