@@ -49,9 +49,13 @@ def click(pg, *names):
         for _ in range(30):
             if n == "つぎへ" or pg.locator("#cmd button", has_text=n).count():
                 break
-            if not pg.locator("#cmd button", has_text="つぎへ").count():
+            if pg.locator("#cmd button", has_text="つぎへ").count():
+                pg.locator("#cmd button", has_text="つぎへ").first.click()
+            elif pg.locator("#cmd button", has_text="もどる").count():
+                # 聞いたあとは話題や「だれに聞く？」に残るので、もどってから押す
+                pg.locator("#cmd button", has_text="もどる").first.click()
+            else:
                 break
-            pg.locator("#cmd button", has_text="つぎへ").first.click()
         pg.locator("#cmd button", has_text=n).first.click()
 
 
@@ -382,6 +386,28 @@ def hub_epilogue(b):
     pg.evaluate("localStorage.setItem('mg:cleared', JSON.stringify(['kamomejima','furiko','fuyu-shiomi']))"); pg.reload()
     e = pg.locator(".game[data-id=epilogue]")
     assert "locked" not in e.get_attribute("class") and "最後のページ" in e.inner_text()
+    return pg.errs
+
+
+def buttons(pg):
+    return pg.locator("#cmd button").all_inner_texts()
+
+
+@test
+def ask_stays_in_menu(b):
+    """聞いたあとは「だれに聞く？」や同じ人の話題に残り、もどるで上に戻れる"""
+    pg = new_shiomi(b)
+    click(pg, "移動", "居間"); click(pg, "聞く", "沙織"); advance(pg)
+    bs = buttons(pg)
+    assert any("沙織" in t for t in bs) and any("ハル" in t for t in bs) and "移動" not in " ".join(bs), bs
+    click(pg, "もどる"); assert any("移動" in t for t in buttons(pg))
+    pg = page(b, FURI)
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
+    pg.evaluate("() => window.__mg.startChapter('ch8')")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
+    click(pg, "聞く", "宮下千鶴", "事件のこと"); advance(pg)
+    bs = buttons(pg)
+    assert any("事件のこと" in t for t in bs) and any("もどる" in t for t in bs), bs
     return pg.errs
 
 
