@@ -715,7 +715,7 @@ def fuyu_ch2_search(b):
     click(pg, "見せる", "新聞の切り抜き", "三島透"); assert "10月8日" in msg(pg)
     click(pg, "移動", "汐見日報"); click(pg, "調べる", "縮刷版")
     advance(pg); pg.fill("#sq", "東京"); click(pg, "探す"); assert "見つからなかった" in msg(pg)
-    advance(pg); pg.fill("#sq", "10月8日"); click(pg, "探す"); assert "新社屋落成" in msg(pg)
+    advance(pg); pg.fill("#sq", "１０月０８日"); click(pg, "探す"); assert "新社屋落成" in msg(pg)   # 全角・頭の0も同じ
     st = state(pg); assert st["f"].get("article") and st["v"]["searches"] == 2
     return pg.errs
 
