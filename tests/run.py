@@ -37,8 +37,17 @@ def page(b, url, cleared=None):
     pg.on("request", lambda r: reqs.append(r.url))
     pg.goto(url)
     pg.wait_for_selector("#title:not(.hide)")
+    if pg.locator("#sndpop").count():
+        pg.locator("#sndpop [data-a=ok]").click()   # 起動時の音の設定
     pg.errs, pg.reqs = errs, reqs
     return pg
+
+
+def dismiss(pg):
+    """タイトルを開いたときに出る音の設定を閉じる"""
+    pg.wait_for_selector("#title:not(.hide)")
+    if pg.locator("#sndpop").count():
+        pg.locator("#sndpop [data-a=ok]").click()
 
 
 def click(pg, *names):
@@ -287,7 +296,7 @@ def autosave_resume(b):
     """ページを開き直すと「つづきから」で再開できる"""
     pg = new_shiomi(b)
     click(pg, "移動", "居間")
-    pg.reload()
+    pg.reload(); dismiss(pg)
     pg.click("text=つづきから")
     assert state(pg)["loc"] == "living"
     return pg.errs
@@ -342,7 +351,7 @@ def notebook(b):
     pg.fill("#memo", "Kは誰？")
     pg.wait_for_timeout(600)
     pg.click("#nbook .nb-x")
-    pg.reload(); pg.click("text=つづきから")
+    pg.reload(); dismiss(pg); pg.click("text=つづきから")
     assert state(pg)["memo"] == "Kは誰？"
     assert state(pg)["cards"][0]["pin"] is True
     return pg.errs
@@ -364,7 +373,7 @@ def hub(b):
     assert pg.locator(".game[data-id=epilogue]").count() == 0
     assert pg.locator(".game.soon").count() == 0  # すべて公開
     pg.click(".game[data-id=shiomi-port]")
-    pg.wait_for_selector("#title:not(.hide)")
+    dismiss(pg)
     pg.click("text=はじめから"); pg.click("#bGo"); click(pg, "移動", "居間")
     pg.click("#menu"); pg.click("#modal .row:has-text('タイトルへ')")
     pg.click("text=作品選択へ")
@@ -414,7 +423,7 @@ def ask_stays_in_menu(b):
 
 @test
 def sound_switches(b):
-    """音：章・場所で曲と環境音が切り替わり、推理の場面では推理の曲、エンディングはエンディングの曲。ミュートできる"""
+    """音：章・場所で曲と環境音が切り替わる。起動時に音の設定が出て、バーで音量を変えられ、設定が残る"""
     pg = page(b, KAMO)
     snd = lambda: pg.evaluate("window.__mg.sound")
     assert snd()["bgm"] == "kamomejima_daily"           # タイトル
@@ -429,9 +438,13 @@ def sound_switches(b):
     s = snd(); assert s["bgm"] == "kamomejima_confront" and s["amb"] == "amb_room", s
     assert "音" in pg.locator("#snd").inner_text()
     pg.evaluate("document.getElementById('modal') && document.getElementById('modal').remove()")
-    pg.click("#snd"); assert snd()["on"] is False
+    assert snd()["vol"] == {"bgm": 30, "amb": 30, "se": 30}   # はじめは小さめ
+    pg.click("#snd"); pg.locator("#sndpop input[data-k=bgm]").fill("70")
+    assert snd()["vol"]["bgm"] == 70
+    pg.locator("#sndpop [data-a=mute]").click(); assert snd()["on"] is False and "音なし" in pg.locator("#snd").inner_text()
     pg.reload(); pg.wait_for_selector("#title:not(.hide)")
-    assert pg.evaluate("window.__mg.sound")["on"] is False   # 設定は残る
+    assert pg.locator("#sndpop").is_visible()                   # タイトルを開くと音の設定が出る
+    assert pg.evaluate("window.__mg.sound")["on"] is False      # 設定は残る
     return pg.errs
 
 

@@ -127,3 +127,14 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 .pill.off{color:var(--sub);text-decoration:line-through}
 #title .pill.sndt{margin-top:4px;font-size:12px}
 #title .credit{color:#5c6370;font-size:11px;line-height:1.7;max-width:320px;margin-top:6px}
+#sndpop{position:fixed;inset:0;z-index:20;background:#000a;display:flex;align-items:center;justify-content:center;padding:20px}
+#sndpop .sheet{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px 18px 18px}
+#sndpop h3{font-family:'Shippori Mincho',serif;font-size:19px;margin-bottom:6px}
+#sndpop .lead{color:var(--sub);font-size:13px;line-height:1.7;margin-bottom:14px}
+#sndpop .row{display:grid;grid-template-columns:4.5em 1fr 2.5em;align-items:center;gap:10px;padding:8px 0}
+#sndpop .n{font-size:14px;font-weight:500}
+#sndpop .v{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums;font-size:13px}
+#sndpop input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+#sndpop .btns{display:flex;gap:8px;margin-top:14px}
+#sndpop .btns .big{flex:1;width:auto}
+#sndpop .big.back{background:transparent;color:var(--sub);border-style:dashed}
