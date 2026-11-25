@@ -342,5 +342,6 @@
    }
   }
  },
- "showDefault": "{name}は、黙っている。"
+ "showDefault": "{name}は、黙っている。",
+ "audio": {"bgm": "furiko_confront", "hush": true}
 }

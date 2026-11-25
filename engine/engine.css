@@ -123,3 +123,7 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 .nb-entry.doc{padding-right:14px}.nb-entry.doc .txt{white-space:pre-wrap;font-variant-numeric:tabular-nums;line-height:1.7}
 #cmd #sq{grid-column:1/-1;font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:inherit}
 #title .lock{color:var(--accent);margin:18px 0 6px}
+/* 音のオン・オフ */
+.pill.off{color:var(--sub);text-decoration:line-through}
+#title .pill.sndt{margin-top:4px;font-size:12px}
+#title .credit{color:#5c6370;font-size:11px;line-height:1.7;max-width:320px;margin-top:6px}

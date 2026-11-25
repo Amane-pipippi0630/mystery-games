@@ -534,5 +534,6 @@
    ]
   }
  },
- "show": {}
+ "show": {},
+ "audio": {"bgm": "common_incident"}
 }

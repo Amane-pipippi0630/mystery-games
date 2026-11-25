@@ -140,7 +140,8 @@ def no_network_while_playing(b):
     for place in ["居間", "汐見警察署", "汐見水産", "書斎"]:
         click(pg, "移動", place)
         pg.wait_for_function("document.querySelector('#bg img') && document.querySelector('#bg img').complete")
-    after = [u for u in pg.reqs[before:] if not u.startswith("data:")]
+    # 音（audio/）は鳴らすときに読み込む。読めなくても遊べる（音が出ないだけ）
+    after = [u for u in pg.reqs[before:] if not u.startswith("data:") and "/audio/" not in u]
     assert after == [], after
     return pg.errs
 
@@ -408,6 +409,29 @@ def ask_stays_in_menu(b):
     click(pg, "聞く", "宮下千鶴", "事件のこと"); advance(pg)
     bs = buttons(pg)
     assert any("事件のこと" in t for t in bs) and any("もどる" in t for t in bs), bs
+    return pg.errs
+
+
+@test
+def sound_switches(b):
+    """音：章・場所で曲と環境音が切り替わり、推理の場面では推理の曲、エンディングはエンディングの曲。ミュートできる"""
+    pg = page(b, KAMO)
+    snd = lambda: pg.evaluate("window.__mg.sound")
+    assert snd()["bgm"] == "kamomejima_daily"           # タイトル
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg)
+    if pg.locator("#card").is_visible(): pg.click("#card")
+    s = snd(); assert s["bgm"] == "kamomejima_daily" and s["amb"] == "amb_calm_sea", s
+    pg.evaluate("window.__mg.openNotebook()")
+    assert snd()["deduce"] is False
+    pg.locator("#nbook .nb-x").click()
+    pg.evaluate("window.__mg.startChapter('ch8')")
+    if pg.locator("#card").is_visible(): pg.click("#card")
+    s = snd(); assert s["bgm"] == "kamomejima_confront" and s["amb"] == "amb_room", s
+    assert "音" in pg.locator("#snd").inner_text()
+    pg.evaluate("document.getElementById('modal') && document.getElementById('modal').remove()")
+    pg.click("#snd"); assert snd()["on"] is False
+    pg.reload(); pg.wait_for_selector("#title:not(.hide)")
+    assert pg.evaluate("window.__mg.sound")["on"] is False   # 設定は残る
     return pg.errs
 
 

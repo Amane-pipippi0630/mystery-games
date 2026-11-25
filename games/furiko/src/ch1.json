@@ -263,7 +263,7 @@
     "goto:shop"
    ]
   },
-  "nagao": {
+  "nagao": { "bgm": "common_incident", "bgmKeep": true,
    "pages": [
     "午後5時20分。裏口の戸が、乱暴にたたかれた。",
     "開けると、灰色のコートの男が立っていた。六十代の終わり。目だけが、妙に若い。",
@@ -276,7 +276,7 @@
     "goto:workshop"
    ]
   },
-  "struggle": {
+  "struggle": { "bgm": "common_incident",
    "pages": [
     "長尾「…話はわかった。なら、こうしよう」",
     "長尾が、作業台の端の手帳を、ひったくるようにつかんだ。立ち上がり、ストーブの扉を開ける。",

@@ -182,5 +182,6 @@
    "id": "fuyu-shiomi",
    "title": "冬の汐見"
   }
- ]
+ ],
+ "audio": {"base": "../../audio/", "credit": "音楽：OpenTracks（旧DOVA-SYNDROME）。音源の抜き出し・転用・再配布は禁止です。", "title": "epilogue_daily", "bgm": "epilogue_daily", "deduce": "common_deduce", "ending": "epilogue_ending", "step": "asphalt", "amb": {"shop": "amb_clocks", "temple": "amb_temple", "haka": "amb_temple", "room": "amb_room", "kuroda": "amb_room", "kawasaki": "amb_room", "police": "amb_room", "geshuku": "amb_room", "isobe": "amb_harbor_now", "grave": "amb_harbor_now", "beach": "amb_harbor_now"}}
 }

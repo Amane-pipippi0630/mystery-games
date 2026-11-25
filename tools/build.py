@@ -142,6 +142,41 @@ def load(gid):
     return g
 
 
+def check_audio(c, g):
+    """音：game.json の audio、章の audio、イベント・エンディングの bgm が audio/ にあるか"""
+    A = g.get("audio")
+    if not A:
+        return
+    adir = ROOT / "audio"
+    def need(where, n):
+        if n and not (adir / f"{n}.m4a").exists():
+            c.err(where, f"音 {n} が audio/ にありません")
+    locs = {l for ch in g["chapters"].values() for l in ch["locations"]}
+    for k in ("title", "bgm", "deduce", "ending"):
+        need(f"audio.{k}", A.get(k))
+    need("audio.step", A.get("step") and "se_step_" + A["step"])
+    for l, n in A.get("amb", {}).items():
+        if l not in locs:
+            c.err("audio.amb", f"場所 {l} はどの章にもありません")
+        need(f"audio.amb.{l}", n)
+    missing = sorted(locs - set(A.get("amb", {})))
+    if missing:
+        c.warn("audio.amb", "環境音のない場所：" + "、".join(missing))
+    for cid, ch in g["chapters"].items():
+        CA = ch.get("audio", {})
+        need(f"{cid}.audio.bgm", CA.get("bgm"))
+        for l, n in CA.get("amb", {}).items():
+            if l not in ch["locations"]:
+                c.err(f"{cid}.audio.amb", f"場所 {l} はこの章にありません")
+            need(f"{cid}.audio.amb.{l}", n)
+        for eid, E in ch.get("events", {}).items():
+            need(f"{cid}.events.{eid}.bgm", E.get("bgm"))
+            if E.get("amb"):
+                need(f"{cid}.events.{eid}.amb", E["amb"])
+    for eid, E in g.get("endings", {}).items():
+        need(f"endings.{eid}.bgm", E.get("bgm"))
+
+
 def check(g):
     c = Checker(g)
     for k, f in g["_bgsrc"].items():
@@ -155,6 +190,7 @@ def check(g):
                 c.warn(f"src/bg/{f.name}", f"縦横比が16:9ではありません（{w}x{h}）。はみ出た部分は切れます")
     if g["start"] not in g["chapters"]:
         c.err("game", f"start の章 {g['start']} がありません")
+    check_audio(c, g)
     bgs = g["assets"]["bg"]
     for eid, e in g.get("endings", {}).items():
         for k in ("bg", "finalBg"):

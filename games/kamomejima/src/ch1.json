@@ -990,7 +990,7 @@
         "card::タキの宣言のとき大食堂にいたのは、タキ・康彦・玲子・圭・沙耶・浅見・磯村・葛西・鷹宮（三島はテラス）"
       ]
     },
-    "blackout": {
+    "blackout": { "bgm": "common_incident",
       "bg": "salon",
       "place": "談話室",
       "pages": [
