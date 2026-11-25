@@ -418,7 +418,8 @@ function choose(id, i) {
 // ---------- 記事の検索 ----------
 // 章の searches: {id: {label, prompt, placeholder, entries: [{keys: [ことば...], ...ルール}], none}}。効果 search:id で出す
 // 入力した言葉に keys のどれかが含まれていれば、そのルールを行う（最初に当たったもの。if も使える）
-const norm = t => String(t).replace(/\s/g, '').normalize('NFKC');
+// 空白を無視し、全角を半角にそろえ、数字の頭の0を取る（「10月08日」→「10月8日」）
+const norm = t => String(t).normalize('NFKC').replace(/\s/g, '').replace(/(^|\D)0+(?=\d)/g, '$1');
 function searchAnswer(id, q) {
   const Q = ch().searches[id]; S.simSearch = null;
   // 見つからないときは、その返事を残したまま入力欄を出し直す
