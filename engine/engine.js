@@ -170,7 +170,7 @@ function btns(list, label, mode) {
   if (label) { const d = document.createElement('div'); d.className = 'label'; d.textContent = label; c.appendChild(d); }
   list.forEach(([t, fn, cls]) => {
     const b = document.createElement('button');
-    b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>` + (t === '手帳' && !label ? '<b id="nbn" class="badge"></b>' : '');
+    b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>` + (t === '手帳' ? '<b id="nbn" class="badge"></b>' : '');
     if (cls) b.className = cls;
     b.onclick = fn; c.appendChild(b);
   });
@@ -218,8 +218,21 @@ function addCard(rule, meta) {
 // 文を出した直後に場面・問い・謎へ移るときは、「つぎへ」をはさんで文を読めるようにする
 // （まちがえて選び直すときは、返事と選択肢を一緒に出したいので、はさまない）
 let actSaid = false;
+// 聞いたあとは、同じ人の話題（話題のない人なら「だれに聞く？」）に戻る。毎回「聞く」を押し直さなくてよい
+let backTo = null;
+function resumeMenu(rs) {
+  if (!rs || SIM || S.done) return main();
+  const ps = here();
+  if (rs.startsWith('topic:')) {
+    const who = rs.slice(6);
+    if (ps.includes(who) && (topicsOf(who) || []).length) return talk(who);
+  }
+  if (ps.length) return askMenu();
+  main();
+}
 function after() {
   const p = pending; pending = {};
+  const rs = backTo; backTo = null;
   const said = actSaid && !SIM; actSaid = false;
   const gate = (id, fn) => (said && (id === null || reask !== id)) ? nextBtn(fn) : fn();
   if (openBefore) {
@@ -247,7 +260,7 @@ function after() {
   if (p.puzzle) return gate(null, () => openPuzzle(p.puzzle));
   if (p.ending) return nextBtn(() => ending(p.ending));
   if (p.chapter) return nextBtn(() => startChapter(p.chapter));
-  main();
+  resumeMenu(rs);
 }
 const avail = id => cond(ch().locations[id].unlock);
 function moveMenu() {
@@ -284,7 +297,9 @@ function hasNewTalk(p, heard) {
   return rs.some(r => r && r.text && r.card && !heard.has(r.text));
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
-function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), back], 'だれに聞く？'); }
+// 聞いている途中でも手帳を開けるようにする（増えた証言カードの数も見える）
+const nbBtn = ['手帳', () => openNotebook()];
+function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), nbBtn, back], 'だれに聞く？'); updateNbBadge(); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
 function assistantHint(tmpl) {
   const heard = heardSet();
@@ -297,11 +312,13 @@ function assistantHint(tmpl) {
 function talk(p) {
   const e = (ch().talk || {})[p], key = 'talk:' + p;
   const hint = p === AS() && !(e && e.topics) ? assistantHint() : null;
-  if (hint) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(hint, { p }); }
+  if (hint) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; backTo = 'ask'; return act(hint, { p }); }
   if (e && e.topics) {
     const ts = topicsOf(p);
-    return btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
+    btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), nbBtn, ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
+    return updateNbBadge();
   }
+  backTo = 'ask';
   if (tieredHint(e, p, key)) return;
   const r = resolve(e, key);
   bumpTalk(p);
@@ -320,6 +337,7 @@ function tieredHint(e, p, key) {
 }
 function talkTopic(p, t) {
   const e = ch().talk[p].topics[t], key = 'talk:' + p + ':' + t;
+  backTo = 'topic:' + p;
   if (p === AS() && t === HT()) {
     const h = assistantHint();
     if (h) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; return act(h, { p }); }
@@ -677,8 +695,11 @@ let nbTab = 'cards', nbQ = { who: '', place: '', ch: '', pin: false, q: '' };
 function openNotebook(tab) {
   if (tab) nbTab = tab;
   closeModal();
-  const old = $('nbook'); if (old) old.remove();
-  const m = document.createElement('div'); m.id = 'nbook';
+  const old = $('nbook');
+  // 同じタブを描き直すとき（カードを選んだ、ピン留めした）は、読んでいた位置を保つ
+  const keep = old && old.dataset.tab === nbTab ? old.querySelector('.nb-body').scrollTop : 0;
+  if (old) old.remove();
+  const m = document.createElement('div'); m.id = 'nbook'; m.dataset.tab = nbTab;
   const tabs = [['cards', '証言カード'], ...(D.notes ? [['notes', D.notes.tab || '取材ノート']] : []), ['log', '会話ログ'], ...(D.docs ? [['docs', '資料']] : []), ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
   m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査手帳')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
@@ -689,6 +710,7 @@ function openNotebook(tab) {
   const body = m.querySelector('.nb-body');
   if (nbTab === 'docs' && !D.docs) nbTab = 'cards';
   ({ cards: nbCards, notes: nbNotes, log: nbLog, docs: nbDocs, items: nbItems, memo: nbMemo, story: nbStory })[nbTab](body);
+  if (keep) body.scrollTop = keep;
 }
 const pinBtn = (on, fn) => { const b = document.createElement('button'); b.className = 'pin' + (on ? ' on' : ''); b.textContent = on ? '★' : '☆'; b.title = 'ピン留め'; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
 function entryEl(e, onPin, isCard) {
@@ -714,6 +736,7 @@ function nbCards(body) {
       go.onclick = () => {
         const ids = nbSel.map(i => S.cards[i].id || ('#' + i)); nbSel = null;
         $('nbook').remove(); contradict(ids);
+        $('msgbox').scrollIntoView({ block: 'nearest' }); // つきつけた結果の文を、すぐ読める位置に
       };
     }
     body.appendChild(box);

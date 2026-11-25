@@ -4,6 +4,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 body{display:flex;justify-content:center}
 button{font-family:inherit;color:inherit}
 #wrap{width:100%;max-width:560px;padding:14px 14px 20px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+#wrap>*{flex-shrink:0} /* 長い文で文章欄が縮んで、文がボタンの下にはみ出さないように */
 header{display:flex;align-items:center;justify-content:space-between}
 #locname{font-family:'Shippori Mincho',serif;font-weight:800;font-size:19px;letter-spacing:.04em}
 #locname small{display:block;font-family:'Noto Sans JP';font-weight:500;font-size:11px;color:var(--accent);letter-spacing:.2em;margin-bottom:1px}
