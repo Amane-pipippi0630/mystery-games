@@ -185,9 +185,18 @@ const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 // ブラウザは最初のタップまで音を出せないので、タップされるまでは「何を流すか」だけ覚えておく
 const snd = (() => {
   const A = D.audio || null;
-  let ctx = null, on = true, want = { bgm: null, amb: null }, cur = { bgm: null, amb: null }, deduce = false, hushT = null, noteT = 0;
+  let ctx = null, want = { bgm: null, amb: null }, cur = { bgm: null, amb: null }, deduce = false, hushT = null, noteT = 0;
+  // 音量（0〜100）。はじめは、音は出るが小さめ
+  const DEF = { bgm: 30, amb: 30, se: 30 };
+  let vol = Object.assign({}, DEF);
   const tracks = {}, ses = {};
-  try { on = localStorage.getItem('mg:sound') !== 'off'; } catch (e) {}
+  try {
+    const v = localStorage.getItem('mg:sound');
+    if (v === 'off') vol = { bgm: 0, amb: 0, se: 0 };
+    else if (v && v[0] === '{') { const o = JSON.parse(v); for (const k in DEF) if (typeof o[k] === 'number') vol[k] = Math.max(0, Math.min(100, o[k])); }
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem('mg:sound', JSON.stringify(vol)); } catch (e) {} };
+  const anyOn = () => vol.bgm + vol.amb + vol.se > 0;
   const VOL = { bgm: 0.5, bgmUnder: 0.38, amb: 0.85, se: 0.7 };
   const url = n => A.base + n + '.m4a';
   function track(n, loop) {
@@ -205,7 +214,7 @@ const snd = (() => {
     if (v > 0 && t.el.paused) t.el.play().catch(() => {});
     if (v === 0) setTimeout(() => { if (t.v === 0 && !t.hold) t.el.pause(); }, sec * 1000 + 50);
   }
-  const level = kind => !on ? 0 : kind === 'amb' ? (deduce ? 0 : VOL.amb) : (cur.amb && !deduce ? VOL.bgmUnder : VOL.bgm);
+  const level = kind => kind === 'amb' ? (deduce ? 0 : VOL.amb * vol.amb / 100) : (cur.amb && !deduce ? VOL.bgmUnder : VOL.bgm) * vol.bgm / 100;
   function apply(kind, sec = 1.2) {
     if (!A || !ctx) return;
     const n = kind === 'bgm' && deduce && A.deduce ? A.deduce : want[kind];
@@ -222,7 +231,7 @@ const snd = (() => {
   }
   if (A && !SIM) ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, unlock, { capture: true }));
   return {
-    get state() { return { on, bgm: cur.bgm || want.bgm, amb: cur.amb || want.amb, deduce, playing: Object.entries(tracks).filter(([, t]) => !t.el.paused && t.v > 0).map(([n, t]) => n + '@' + t.el.currentTime.toFixed(1)) }; },
+    get state() { return { on: anyOn(), vol: Object.assign({}, vol), bgm: cur.bgm || want.bgm, amb: cur.amb || want.amb, deduce, playing: Object.entries(tracks).filter(([, t]) => !t.el.paused && t.v > 0).map(([n, t]) => n + '@' + t.el.currentTime.toFixed(1)) }; },
     bgm(n) { if (SIM || !A || want.bgm === (n || null)) return; want.bgm = n || null; if (!hushT) apply('bgm'); },
     amb(n) { if (SIM || !A || want.amb === (n || null)) return; want.amb = n || null; if (!hushT) { apply('amb'); apply('bgm', 1.5); } },
     // 推理の場面：環境音を止め、推理の曲にする
@@ -240,14 +249,18 @@ const snd = (() => {
       hushT = setTimeout(() => { hushT = null; pre.forEach(t => { t.hold = false; }); refresh(1.5); }, ms);
     },
     se(n) {
-      if (SIM || !A || !on || !ctx) return;
+      if (SIM || !A || !vol.se || !ctx) return;
       if (n === 'note') { const now = Date.now(); if (now - noteT < 400) return; noteT = now; }
       const key = 'se_' + (n === 'step' ? 'step_' + (A.step || 'asphalt') : n);
       const el = ses[key] || (ses[key] = new Audio(url(key)));
-      el.volume = VOL.se; el.currentTime = 0; el.play().catch(() => {});
+      el.volume = VOL.se * vol.se / 100; el.currentTime = 0; el.play().catch(() => {});
     },
-    toggle() { on = !on; try { localStorage.setItem('mg:sound', on ? 'on' : 'off'); } catch (e) {} unlock(); refresh(0.4); return on; },
-    get on() { return on; },
+    // 音量バー：kind は bgm / amb / se、v は 0〜100
+    setVol(kind, v) { vol[kind] = Math.max(0, Math.min(100, Math.round(v))); save(); unlock(); refresh(0.2); },
+    get vol() { return Object.assign({}, vol); },
+    mute() { vol = { bgm: 0, amb: 0, se: 0 }; save(); refresh(0.3); },
+    unlock() { unlock(); },
+    get on() { return anyOn(); },
     get enabled() { return !!A; },
   };
 })();
@@ -255,9 +268,29 @@ const chapterBgm = () => (ch().audio && ch().audio.bgm) || (D.audio && D.audio.b
 const locAmb = () => { const C = ch().audio && ch().audio.amb, G = D.audio && D.audio.amb; return (C && S.loc in C ? C[S.loc] : G && G[S.loc]) || null; };
 function soundBtn(el) {
   if (!snd.enabled) { el.remove(); return; }
-  const draw = () => { el.textContent = snd.on ? '♪ 音あり' : '♪ 音なし'; el.classList.toggle('off', !snd.on); el.setAttribute('aria-pressed', snd.on ? 'true' : 'false'); };
-  el.onclick = e => { e.stopPropagation(); snd.toggle(); draw(); };
+  const draw = () => { el.textContent = snd.on ? '♪ 音' : '♪ 音なし'; el.classList.toggle('off', !snd.on); };
+  el.onclick = e => { e.stopPropagation(); soundPanel(draw); };
+  el._draw = draw;
   draw();
+}
+// 音の設定：BGM・環境音・効果音のバー。タイトルを開いたときにも出す（このタップで音が鳴りはじめる）
+function soundPanel(onClose, first) {
+  if (!snd.enabled || $('sndpop')) return;
+  const m = document.createElement('div'); m.id = 'sndpop';
+  const rows = [['bgm', 'BGM'], ['amb', '環境音'], ['se', '効果音']];
+  m.innerHTML = `<div class="sheet" role="dialog" aria-label="音の設定"><h3>音の設定</h3>
+    <p class="lead">${first ? 'このゲームは音が出ます。はじめは小さめの音量です。' : ''}あとから画面の上の「♪ 音」で変えられます。</p>
+    ${rows.map(([k, n]) => `<label class="row"><span class="n">${n}</span><input type="range" min="0" max="100" step="5" data-k="${k}" value="${snd.vol[k]}" aria-label="${n}の音量"><span class="v" data-v="${k}">${snd.vol[k]}</span></label>`).join('')}
+    <div class="btns"><button class="big back" data-a="mute">音を出さない</button><button class="big primary" data-a="ok">${first ? 'この音量にする' : 'とじる'}</button></div></div>`;
+  const close = () => { m.remove(); document.querySelectorAll('#snd,.sndt').forEach(b => b._draw && b._draw()); if (onClose) onClose(); };
+  m.querySelectorAll('input[type=range]').forEach(r => {
+    r.oninput = () => { snd.setVol(r.dataset.k, +r.value); m.querySelector(`[data-v="${r.dataset.k}"]`).textContent = r.value; };
+    if (r.dataset.k === 'se') r.onchange = () => snd.se('select');
+  });
+  m.querySelector('[data-a=mute]').onclick = () => { snd.mute(); close(); };
+  m.querySelector('[data-a=ok]').onclick = () => { snd.unlock(); close(); };
+  m.onclick = e => { if (e.target === m) close(); };
+  document.body.appendChild(m);
 }
 
 // ---------- 行動 ----------
@@ -1033,6 +1066,7 @@ window.__mg = { get state() { return S; }, get sound() { return snd.state; }, co
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();
+  soundPanel(null, true);
   if (failed) toast(`背景 ${failed} 枚を読み込めませんでした`);
 });
 })();
