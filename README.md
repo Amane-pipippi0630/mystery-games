@@ -31,3 +31,7 @@ python3 tools/verify.py kamomejima   # 詰み・エラー・行き止まりの�
 ```
 
 `games/<id>/index.html` は組み立てた結果なので、直接編集せず `src/` を直してください。
+
+## 遊ぶ
+
+https://amane-pipippi0630.github.io/mystery-games/
