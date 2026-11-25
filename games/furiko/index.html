@@ -499,11 +499,12 @@ function addCard(rule, meta) {
 // 文を出した直後に場面・問い・謎へ移るときは、「つぎへ」をはさんで文を読めるようにする
 // （まちがえて選び直すときは、返事と選択肢を一緒に出したいので、はさまない）
 let actSaid = false;
-// 聞いたあとは、同じ人の話題（話題のない人なら「だれに聞く？」）に戻る。毎回「聞く」を押し直さなくてよい
+// 聞いたあとは同じ人の話題（話題のない人なら「だれに聞く？」）に、調べたあとは「何を調べる？」に戻る。毎回押し直さなくてよい
 let backTo = null;
 function resumeMenu(rs) {
   if (!rs || SIM || S.done) return main();
   snd.deduce(false);
+  if (rs === 'look') return Object.keys(loc().objs || {}).length ? lookMenu() : main();
   const ps = here();
   if (rs.startsWith('topic:')) {
     const who = rs.slice(6);
@@ -630,8 +631,10 @@ function talkTopic(p, t) {
   bumpTalk(p);
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
-function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), back], '何を調べる？'); }
+function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), nbBtn, back], '何を調べる？'); updateNbBadge(); }
+// 調べたあとも「何を調べる？」に残る
 function look(o) {
+  backTo = 'look';
   const r = resolve((ch().look || {})[o], 'look:' + S.loc + ':' + o);
   act(r || { text: '特に変わったところはない。' });
 }
