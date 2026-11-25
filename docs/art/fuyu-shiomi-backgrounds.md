@@ -19,6 +19,10 @@
 **ネガティブ**
 > people, characters, faces, text, letters, signage, watermark, collage, multiple panels, smartphone, modern car, television
 
+## 取り込み状況（2026-11-25）
+
+Gemini で18枚とエピローグ2枚を生成し、すべて取り込み済み（1376×768 を 16:9 に切り出し、build で 1280px の WebP に変換）。汐見署の表彰写真に人影が小さく写る、豆腐店ののれんに「豆」の字がある、の2点は物語上そのままにした。
+
 ## 一覧（冬の汐見）
 
 | # | 名前 | 場面 | 章 |

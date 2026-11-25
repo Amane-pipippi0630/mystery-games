@@ -17,15 +17,9 @@
 **ネガティブ**
 > people, characters, faces, text, letters, signage, watermark, collage, multiple panels
 
-## 生成状況（2026-11-24）
+## 取り込み状況（2026-11-25）
 
-Canva の画像生成で作成。作業環境からは本体をダウンロードできないため、Canva で開いてダウンロードし、取り込む。
-
-| 名前 | Canva | 状況 |
-|---|---|---|
-| `shop` | [MAHbzmE47lk](https://www.canva.com/M/MAHbzmE47lk) | 生成済み・未取り込み |
-| `workshop` | [MAHbzigvOpA](https://www.canva.com/M/MAHbzigvOpA) | 生成済み・未取り込み |
-| ほか32枚 | | Canva のクレジット上限で止まっている |
+Gemini で14枚を生成し、すべて取り込み済み（1376×768 を 16:9 に切り出し、build で 1280px の WebP に変換）。汐見署の表彰写真に人影が小さく写る、豆腐店ののれんに「豆」の字がある、の2点は物語上そのままにした。
 
 ## 一覧
 
