@@ -44,6 +44,10 @@ h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:38px;letter-spa
 #toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-20px);opacity:0;background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;transition:.3s;z-index:9;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 footer{color:#5c6370;font-size:11px;text-align:center;margin-top:24px}
+.debug{margin:18px 0 6px;padding:14px;border:1px dashed #e0a43a;border-radius:16px;display:flex;flex-direction:column;gap:8px}
+.debug h2{font-size:15px;color:#e0a43a}
+.debug p{font-size:12px;color:#8a93a3;line-height:1.6}
+.debug button{font:inherit;font-size:14px;padding:12px;border-radius:12px;border:1px solid #3a4254;background:#1b2130;color:#e8e8ea;cursor:pointer;text-align:left}
 </style>
 </head>
 <body>
@@ -99,6 +103,19 @@ const others = H.games.filter(g => !g.trilogy);
 if (others.length) {
   w.insertAdjacentHTML('beforeend', '<div class="sec">ほかの事件</div>');
   others.forEach(g => w.appendChild(card(g)));
+}
+// デバッグ用：URL に ?debug をつけると、クリア記録を切り替えるボタンが出る（スマホとPCで記録が別々なので）
+if (/[?&]debug\b/.test(location.search)) {
+  const tri = trilogy.map(g => g.id);
+  const sets = [['クリア記録なし', []], ['第一作をクリア', tri.slice(0, 1)], ['第二作までクリア', tri.slice(0, 2)], ['第三作までクリア（エピローグが開く）', tri.slice(0, 3)], ['すべてクリア', H.games.map(g => g.id).concat(H.epilogue ? [H.epilogue.id] : [])]];
+  const box = document.createElement('section'); box.className = 'debug';
+  box.innerHTML = '<h2>デバッグ：クリア記録</h2><p>このブラウザのクリア記録だけを書きかえます。各作品の途中のセーブはそのままです。</p><p class="now">いま：' + esc(cleared.join('、') || 'なし') + '</p>';
+  sets.forEach(([label, ids]) => {
+    const b = document.createElement('button'); b.textContent = label;
+    b.onclick = () => { localStorage.setItem('mg:cleared', JSON.stringify(ids)); location.reload(); };
+    box.appendChild(b);
+  });
+  w.appendChild(box);
 }
 w.insertAdjacentHTML('beforeend', '<footer>進み具合とクリアの記録は、このブラウザに保存されます。<br>音楽：OpenTracks（旧DOVA-SYNDROME）の素材を使っています。音源の抜き出し・転用・再配布は禁止です。</footer>');
 // 「戻る」で戻ってきたとき、押した状態が残らないようにする

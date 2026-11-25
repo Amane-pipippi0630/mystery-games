@@ -5,6 +5,7 @@
   python3 tests/run.py
 """
 import json
+import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -881,6 +882,23 @@ def sequential_unlock(b):
     return pg.errs + pg2.errs + pg3.errs
 
 
+@test
+def hub_debug(b):
+    """作品選択に ?debug をつけると、クリア記録を切り替えて第二作・第三作・エピローグをすぐ遊べる"""
+    pg = hub_page(b)
+    assert pg.locator(".debug").count() == 0                      # ふだんは出ない
+    pg.goto(HUB + "?debug")
+    pg.click(".debug >> text=第二作までクリア")
+    pg.wait_for_selector(".debug")
+    assert pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))") == ["kamomejima", "furiko"]
+    pg.click(".debug >> text=第三作までクリア")
+    pg.wait_for_selector(".game[data-id=epilogue]")
+    pg.click(".debug >> text=クリア記録なし")
+    pg.wait_for_selector(".debug")
+    assert pg.evaluate("localStorage.getItem('mg:cleared')") == "[]"
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
     for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:
@@ -888,7 +906,8 @@ if __name__ == "__main__":
     ok = 0
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for fn in results:
+        only = [a for a in sys.argv[1:] if not a.startswith("-")]  # 名前の一部を渡すと、そのテストだけ
+        for fn in [f for f in results if not only or any(o in f.__name__ for o in only)]:
             try:
                 errs = fn(b)
                 assert not errs, errs
@@ -897,5 +916,6 @@ if __name__ == "__main__":
             except Exception as e:
                 print("NG  ", fn.__doc__, "→", repr(e)[:300])
         b.close()
-    print(f"{ok}/{len(results)} 件 OK")
-    raise SystemExit(0 if ok == len(results) else 1)
+    n = len([f for f in results if not only or any(o in f.__name__ for o in only)])
+    print(f"{ok}/{n} 件 OK")
+    raise SystemExit(0 if ok == n else 1)
