@@ -38,7 +38,28 @@ def page(b, url):
 
 def click(pg, *names):
     for n in names:
+        if n == "つぎへ" and (overlay(pg) or not pg.locator("#cmd button", has_text="つぎへ").count()):
+            continue  # 章の扉や結果が出ているとき、つぎへが無いときは何もしない
+        # 文のあとに「つぎへ」がはさまっていたら、目当てのボタンが出るまで進める
+        for _ in range(30):
+            if n == "つぎへ" or pg.locator("#cmd button", has_text=n).count():
+                break
+            if not pg.locator("#cmd button", has_text="つぎへ").count():
+                break
+            pg.locator("#cmd button", has_text="つぎへ").first.click()
         pg.locator("#cmd button", has_text=n).first.click()
+
+
+def overlay(pg):
+    return pg.locator("#card").is_visible() or pg.locator("#modal").is_visible()
+
+
+def advance(pg):
+    """「つぎへ」が出ているあいだ進める"""
+    for _ in range(30):
+        if overlay(pg) or not pg.locator("#cmd button", has_text="つぎへ").count():
+            return
+        pg.locator("#cmd button", has_text="つぎへ").first.click()
 
 
 def msg(pg):
@@ -267,13 +288,13 @@ def chapters(b):
     """章が切り替わり、章のはじめが保存される"""
     pg = page(b, MINI)
     pg.click("text=はじめから")
-    assert pg.locator("#card").inner_text().startswith("第一章")
-    pg.click("#card")
+    assert (advance(pg), pg.locator("#card").inner_text())[1].startswith("第一章")
+    advance(pg); pg.click("#card")
     click(pg, "聞く", "助手A"); click(pg, "聞く", "助手A"); click(pg, "聞く", "助手A")
     assert "二回目以降" in msg(pg)
     click(pg, "調べる", "箱"); click(pg, "つぎへ")
-    assert "第二章" in pg.locator("#card").inner_text()
-    pg.click("#card")
+    assert "第二章" in (advance(pg), pg.locator("#card").inner_text())[1]
+    advance(pg); pg.click("#card")
     assert "箱から鍵" in pg.locator("#modal .recap").inner_text()  # これまでの話
     pg.click("#modal >> text=つづける")
     assert state(pg)["chapter"] == "ch2"
@@ -368,7 +389,7 @@ def ask(pg, who, topic="いまのこと", n=1):
 def kamomejima_ch1(b):
     """鴎島館 第1章：話題を選んで聞き、取材ノートが5件たまると宴、港から停電まで通して遊べる"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     ask(pg, "鷹宮", "相談する")
     assert "三島さん、まだ何か話してくれそう" in msg(pg)  # 聞き残しがあれば先に教える
     ask(pg, "三島", n=3); ask(pg, "三島", "創業者のこと", 3)
@@ -401,7 +422,7 @@ def kamomejima_ch1(b):
     ask(pg, "鷹宮", "ミステリー談義")
     for _ in range(11):
         click(pg, "つぎへ")
-    assert "第二章" in pg.locator("#card").inner_text()   # 第2章へ続く
+    assert "第二章" in (advance(pg), pg.locator("#card").inner_text())[1]   # 第2章へ続く
     st = state(pg)
     assert len(st["notes"]) == 5 and st["v"]["hints"] == 5, (st["notes"], st["v"])
     return pg.errs
@@ -411,13 +432,14 @@ def kamomejima_ch1(b):
 def kamomejima_ch2(b):
     """鴎島館 第2章：書庫を破り、島が孤立し、7人の停電中の居場所と現場を調べると章が終わる"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
-    pg.evaluate("window.__mg.startChapter('ch2')"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch2')"); advance(pg); pg.click("#card")
     assert "これまでの話" in pg.locator("#modal").inner_text()
     pg.click("#modal >> text=つづける")
     click(pg, "移動", "西棟の廊下"); ask(pg, "磯村")
     for _ in range(7):
         click(pg, "つぎへ")
+    advance(pg)
     assert state(pg)["f"].get("found")
     click(pg, "調べる", "床のしみ")
     click(pg, "移動", "書庫"); click(pg, "調べる", "閂"); click(pg, "調べる", "革のファイル")
@@ -428,7 +450,7 @@ def kamomejima_ch2(b):
         ask(pg, p, "停電のあいだ")
     for _ in range(7):
         click(pg, "つぎへ")
-    assert "第三章" in pg.locator("#card").inner_text()   # 第3章へ続く
+    assert "第三章" in (advance(pg), pg.locator("#card").inner_text())[1]   # 第3章へ続く
     ids = [c.get("id") for c in state(pg)["cards"]]
     assert "kei_sleep" in ids and "mishima_stay" in ids   # 第3章・第6章の矛盾で使うカード
     assert not pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared') || '[]')").count("kamomejima")
@@ -451,14 +473,15 @@ def verify_finds_deadend(b):
 def kamomejima_ch3(b):
     """鴎島館 第3章：講義、浅見の客室、書庫が無人だったこと、三島のうそ（矛盾）、本棚の血で章が終わる"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     # 第2章で手に入る三島のカードを持っている状態で、第3章を始める
     pg.evaluate("""() => { const S = window.__mg.state; S.cards.push({ id: 'mishima_stay', c: 'ch2', l: 'salon', p: 'mishima', t: '停電中は談話室から一歩も出ていない', pin: false });
       window.__mg.startChapter('ch3'); }""")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     ask(pg, "鷹宮")
     for _ in range(9):
         click(pg, "つぎへ")
+    advance(pg)
     assert state(pg)["f"].get("lecture")
     click(pg, "移動", "浅見の客室"); click(pg, "調べる", "浅見のかばん")
     click(pg, "移動", "談話室"); ask(pg, "玲子"); ask(pg, "玲子", "停電のあいだ")
@@ -468,7 +491,7 @@ def kamomejima_ch3(b):
     click(pg, "移動", "書庫"); click(pg, "調べる", "右の本棚")
     for _ in range(7):
         click(pg, "つぎへ")
-    assert "第四章" in pg.locator("#card").inner_text()   # 第4章へ続く
+    assert "第四章" in (advance(pg), pg.locator("#card").inner_text())[1]   # 第4章へ続く
     return pg.errs
 
 
@@ -476,8 +499,8 @@ def kamomejima_ch3(b):
 def kamomejima_ch4(b):
     """鴎島館 第4章：図面・磯村のうそ（矛盾）・隠し金庫・小箱の番号（1946）・手帳・三島のメモ"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
-    pg.evaluate("window.__mg.startChapter('ch4')"); pg.click("#card"); pg.click("#modal >> text=つづける")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch4')"); advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     click(pg, "調べる", "右の本棚")
     click(pg, "移動", "玄関ホール"); ask(pg, "沙耶", "館と島のこと")
     click(pg, "移動", "執事室"); ask(pg, "磯村", "館と島のこと")
@@ -501,7 +524,7 @@ def kamomejima_ch4(b):
     click(pg, "移動", "談話室"); ask(pg, "三島")
     for _ in range(9):
         click(pg, "つぎへ")
-    assert "第五章" in pg.locator("#card").inner_text()   # 第5章へ続く
+    assert "第五章" in (advance(pg), pg.locator("#card").inner_text())[1]   # 第5章へ続く
     return pg.errs
 
 
@@ -509,11 +532,12 @@ def kamomejima_ch4(b):
 def kamomejima_ch5(b):
     """鴎島館 第5章：崖で康彦を見つけ、メモ・濡れた雨具・通用口の鍵・6人の昨夜の居場所で章が終わる"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
-    pg.evaluate("window.__mg.startChapter('ch5')"); pg.click("#card"); pg.click("#modal >> text=つづける")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
+    pg.evaluate("window.__mg.startChapter('ch5')"); advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     click(pg, "移動", "灯台の崖"); ask(pg, "磯村")
     for _ in range(6):
         click(pg, "つぎへ")
+    advance(pg)
     assert state(pg)["f"].get("carried")
     click(pg, "調べる", "康彦の雨具")
     assert "memo2" in state(pg)["items"]
@@ -524,7 +548,7 @@ def kamomejima_ch5(b):
         ask(pg, p, "昨夜のこと")
     for _ in range(7):
         click(pg, "つぎへ")
-    assert "第六章" in pg.locator("#card").inner_text()   # 第6章へ続く
+    assert "第六章" in (advance(pg), pg.locator("#card").inner_text())[1]   # 第6章へ続く
     return pg.errs
 
 
@@ -532,12 +556,12 @@ def kamomejima_ch5(b):
 def kamomejima_ch6_to_end(b):
     """鴎島館 第6〜8章：手帳の謎を切り分け、圭のうそ（矛盾）、内線の記録、推理ボード、指名、解決編、クリアで⭐️"""
     pg = page(b, KAMO)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     # 第2章で手に入る圭のカードを持って第6章を始める
     pg.evaluate("""() => { const S = window.__mg.state; S.cards.push({ id: 'kei_sleep', c: 'ch2', l: 'salon', p: 'kei', t: '停電中は本館2階の自室で寝ていた。停電にも気づかなかった', pin: false });
       ['taki','reiko','kei','saya','isomura','mishima'].forEach(p => S.seq['talk:' + p] = 1);
       window.__mg.startChapter('ch6'); }""")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     ask(pg, "鷹宮")
     for _ in range(4):
         click(pg, "つぎへ")
@@ -551,16 +575,16 @@ def kamomejima_ch6_to_end(b):
     for _ in range(5):
         click(pg, "つぎへ")
     # 第7章：読者への挑戦 → 推理ボード
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     for _ in range(5):
         click(pg, "つぎへ")
-    pg.wait_for_selector("#modal .board")
+    advance(pg); pg.wait_for_selector("#modal .board")
     for label in ["手帳を探していた", "書庫の資料"]:              # まちがった条件 → 三島ひとり
         pg.click(f"#modal .board .row:has-text('{label}')")
     assert pg.locator("#modal .b-sus span:not(.out)").all_inner_texts() == ["三島"]
     pg.click("#modal >> text=この条件で推理する")
     assert "ほんまに犯人の条件か" in msg(pg) and state(pg)["v"]["miss"] == 1
-    ask(pg, "鷹宮")
+    ask(pg, "鷹宮"); advance(pg); pg.wait_for_selector("#modal .board")
     for label in ["西棟にいることができた", "遺言書を持っていると知っていた", "存在を知らなかった", "アリバイがない"]:
         pg.click(f"#modal .board .row:has-text('{label}')")
     assert pg.locator("#modal .b-sus span:not(.out)").all_inner_texts() == ["圭"]
@@ -570,9 +594,10 @@ def kamomejima_ch6_to_end(b):
     assert state(pg)["v"]["miss"] == 2
     click(pg, "推理", "圭"); click(pg, "つぎへ")
     # 終章：解決編
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     for _ in range(15):
         click(pg, "つぎへ")
+    advance(pg)
     assert state(pg)["f"].get("solved")
     click(pg, "移動", "客室"); click(pg, "調べる", "鞄")
     click(pg, "移動", "テラス")
@@ -588,7 +613,7 @@ def kamomejima_ch6_to_end(b):
 def conditions(b):
     """条件式の評価"""
     pg = page(b, MINI)
-    pg.click("text=はじめから"); pg.click("#card")
+    pg.click("text=はじめから"); advance(pg); pg.click("#card")
     r = pg.evaluate("""() => { const c = window.__mg.cond, S = window.__mg.state;
       S.f.a = 1; S.v.n = 3; S.items.push('key');
       return [c('flag:a'), c('!flag:b'), c('flag:a && has:key'), c('flag:b || var:n>=3'),
@@ -603,23 +628,24 @@ def conditions(b):
 def extras_think_choice_doc(b):
     """考える・選択式の問い・資料タブ・章ごとの助手・記事の検索が動く"""
     pg = page(b, EXTRAS)
-    pg.click("text=はじめから"); pg.click("#card")
+    pg.click("text=はじめから"); advance(pg); pg.click("#card")
     assert pg.locator("#cmd button", has_text="推理").count() == 0
     click(pg, "考える"); assert "Xさん" in msg(pg)          # 聞き残しを教える
     click(pg, "考える"); assert "何か足りない" in msg(pg)    # 段階式ヒント
     click(pg, "考える"); assert "Xに聞こう" in msg(pg)
     click(pg, "聞く", "人物X")
+    advance(pg)
     assert "なぜだろう" in msg(pg)
     click(pg, "手帳を見る"); assert "千鶴の手帳" in pg.inner_text("#nbook h3")
     pg.click("#nbook .nb-tabs >> text=資料"); assert "0.4℃" in pg.inner_text("#nbook .nb-body")
     pg.click("#nbook .nb-x")
     click(pg, "まちがい"); assert "ちがう" in msg(pg)
     assert pg.locator("#cmd button", has_text="正解").count() == 1   # もう一度選び直せる
-    click(pg, "正解"); click(pg, "つぎへ"); pg.click("#card")
+    click(pg, "正解"); click(pg, "つぎへ"); advance(pg); pg.click("#card")
     click(pg, "聞く", "助手A"); assert "Xに聞いてみて" in msg(pg)   # 章ごとの助手
     click(pg, "調べる", "縮刷版")
-    pg.fill("#sq", "汐見"); click(pg, "探す"); assert "「汐見」の記事はない" in msg(pg)
-    pg.fill("#sq", "久我 海運"); click(pg, "探す"); assert "新社屋" in msg(pg)   # 空白は無視
+    advance(pg); pg.fill("#sq", "汐見"); click(pg, "探す"); assert "「汐見」の記事はない" in msg(pg)
+    advance(pg); pg.fill("#sq", "久我 海運"); click(pg, "探す"); assert "新社屋" in msg(pg)   # 空白は無視
     assert state(pg)["f"].get("found")
     click(pg, "聞く", "人物X"); click(pg, "推理", "X")
     st = state(pg); assert st["v"]["miss"] == 1 and st["v"]["hints"] == 4, st["v"]
@@ -639,9 +665,10 @@ def extras_verify(b):
 def furiko_ch1_open(b):
     """振り子 第1章：磯村が手帳を返し、千鶴の視点（考える・推理なし）で始まる"""
     pg = page(b, FURI)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     for _ in range(8):
         click(pg, "つぎへ")
+    advance(pg)
     assert "techou" in state(pg)["items"]
     assert pg.locator("#cmd button", has_text="推理").count() == 0
     click(pg, "考える"); assert "手帳" in msg(pg)
@@ -654,10 +681,10 @@ def furiko_ch1_open(b):
 def furiko_ch8_end(b):
     """振り子 第8章：指名→「なぜ」の選び直し→正解でクリア、⭐️が付く"""
     pg = page(b, FURI)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     pg.evaluate("""() => { const m = window.__mg; m.startChapter('ch8');
       const S = m.state; ['chizuru','ao','okuma','tachibana','komatsu'].forEach(p => S.seq['talk:' + p] = 1); }""")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     click(pg, "聞く", "宮下千鶴", "事件のこと"); click(pg, "聞く", "宮下蒼", "事件のこと")
     click(pg, "推理", "蒼"); assert "確かめておくこと" in msg(pg)   # 手帳を見ていない
     click(pg, "移動", "2階の居間"); click(pg, "調べる", "仏壇")
@@ -682,13 +709,13 @@ def furiko_ch8_end(b):
 def fuyu_ch2_search(b):
     """冬の汐見 第2章：切り抜きを三島に見せ、縮刷版を言葉で探すと記事が見つかる"""
     pg = page(b, FUYU)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     pg.evaluate("() => { const m = window.__mg; m.state.items.push('kirinuki', 'photo'); m.startChapter('ch2'); }")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     click(pg, "見せる", "新聞の切り抜き", "三島透"); assert "10月8日" in msg(pg)
     click(pg, "移動", "汐見日報"); click(pg, "調べる", "縮刷版")
-    pg.fill("#sq", "東京"); click(pg, "探す"); assert "見つからなかった" in msg(pg)
-    pg.fill("#sq", "10月8日"); click(pg, "探す"); assert "新社屋落成" in msg(pg)
+    advance(pg); pg.fill("#sq", "東京"); click(pg, "探す"); assert "見つからなかった" in msg(pg)
+    advance(pg); pg.fill("#sq", "10月8日"); click(pg, "探す"); assert "新社屋落成" in msg(pg)
     st = state(pg); assert st["f"].get("article") and st["v"]["searches"] == 2
     return pg.errs
 
@@ -697,24 +724,28 @@ def fuyu_ch2_search(b):
 def fuyu_ch8_end(b):
     """冬の汐見 第8章：浜で佐伯と話し、指名→「名前」の問い→クリアで⭐️"""
     pg = page(b, FUYU)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     pg.evaluate("""() => { const m = window.__mg; m.startChapter('ch8');
       ['kuga','kuroda','nonomura','gondo','shujin'].forEach(p => m.state.seq['talk:' + p] = 1); }""")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     for _ in range(5):
         click(pg, "つぎへ")
     click(pg, "聞く", "佐伯修", "昭和16年の火事")
     click(pg, "推理", "佐伯"); assert "伝えなければ" in msg(pg) or "その前に" in msg(pg)
     click(pg, "聞く", "佐伯修", "引き揚げ船のこと"); click(pg, "聞く", "佐伯修", "2月10日の夜")
     click(pg, "推理", "黒田"); click(pg, "推理", "佐伯")
-    for _ in range(8):
+    click(pg, "つぎへ"); click(pg, "つぎへ")
+    click(pg, "佐伯本人"); click(pg, "秘書の野々村"); click(pg, "つぎへ")
+    click(pg, "ホテルの押し入れ"); click(pg, "つぎへ"); click(pg, "つぎへ")
+    click(pg, "久我海運の荷札ひも")
+    for _ in range(5):
         click(pg, "つぎへ")
     click(pg, "盗んだ"); click(pg, "託された")
     for _ in range(30):
         if pg.locator("#cmd button", has_text="タイトルへ").count():
             break
         click(pg, "つぎへ")
-    assert "完" in msg(pg) and state(pg)["v"]["miss"] == 2
+    assert "完" in msg(pg) and state(pg)["v"]["miss"] == 3
     assert "fuyu-shiomi" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
     return pg.errs
 
@@ -723,7 +754,7 @@ def fuyu_ch8_end(b):
 def epilogue_clear(b):
     """隠しエピローグ：封筒を届け、汐見の浜で開けると、志乃の手紙で終わる"""
     pg = page(b, EPI)
-    pg.click("text=はじめから"); pg.click("#bGo"); pg.click("#card")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     click(pg, "調べる", "祖父の箱"); click(pg, "調べる", "新聞")
     click(pg, "移動", "宮下時計店")
     click(pg, "見せる", "佐伯修の封筒", "宮下千鶴"); assert "もう少し" in msg(pg)
@@ -731,7 +762,7 @@ def epilogue_clear(b):
     click(pg, "見せる", "佐伯修の封筒", "宮下千鶴")
     for _ in range(6):
         click(pg, "つぎへ")
-    pg.click("#card"); pg.click("#modal >> text=つづける")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
     click(pg, "聞く", "汐見署の警部", "沖田のこと"); click(pg, "聞く", "マコト", "沖田のこと")
     click(pg, "移動", "佐伯家の墓"); click(pg, "調べる", "墓石")
     click(pg, "移動", "汐見の浜"); click(pg, "調べる", "波打ちぎわ")

@@ -343,6 +343,7 @@ function act(rule, meta) {
   S.v.turns = (S.v.turns || 0) + 1;
   pending = {};
   openBefore = openLocs();
+  actSaid = !!(rule && rule.text);
   if (rule) { run(rule.do); if (rule.text) say(rule.text, meta); if (rule.card) addCard(rule, meta); if (rule.note) addNote(rule, meta); }
   after();
 }
@@ -362,8 +363,13 @@ function addCard(rule, meta) {
   toast('証言カードに記録した');
   updateNbBadge();
 }
+// 文を出した直後に場面・問い・謎へ移るときは、「つぎへ」をはさんで文を読めるようにする
+// （まちがえて選び直すときは、返事と選択肢を一緒に出したいので、はさまない）
+let actSaid = false;
 function after() {
   const p = pending; pending = {};
+  const said = actSaid && !SIM; actSaid = false;
+  const gate = (id, fn) => (said && (id === null || reask !== id)) ? nextBtn(fn) : fn();
   if (openBefore) {
     const now = openLocs().filter(k => !openBefore.includes(k));
     if (now.length) toast(now.map(k => ch().locations[k].name).join('・') + 'に行けるようになった');
@@ -376,17 +382,17 @@ function after() {
     if (t) { pending = {}; run(t.do); Object.assign(p, pending); pending = {}; }
   }
   autosave();
-  if (p.event) return playEvent(p.event);
+  if (p.event) return gate(null, () => playEvent(p.event));
   if (SIM && p.puzzle) { S.simPuzzle = p.puzzle; return; }
   if (SIM && p.board) { S.simBoard = p.board; return; }
   if (!p.choice && !p.search) reask = null;
   if (SIM && p.search) { S.simSearch = p.search; return; }
-  if (p.search) return openSearch(p.search);
+  if (p.search) return gate(p.search, () => openSearch(p.search));
   if (SIM && p.choice) { S.simChoice = p.choice; return; }
-  if (p.choice) return openChoice(p.choice);
-  if (p.board) return openBoard(p.board);
+  if (p.choice) return gate(p.choice, () => openChoice(p.choice));
+  if (p.board) return gate(null, () => openBoard(p.board));
   if (SIM && (p.ending || p.chapter)) { S.simEnd = p.ending ? 'ending:' + p.ending : 'chapter:' + p.chapter; return; }
-  if (p.puzzle) return openPuzzle(p.puzzle);
+  if (p.puzzle) return gate(null, () => openPuzzle(p.puzzle));
   if (p.ending) return nextBtn(() => ending(p.ending));
   if (p.chapter) return nextBtn(() => startChapter(p.chapter));
   main();
@@ -656,7 +662,7 @@ function startChapter(id) {
   resetFor(C);
   store.set('chap:' + id, snapshot((C.label ? C.label + ' ' : '') + (C.title || '') + 'のはじめ'));
   // start.do：章のはじめにすぐ行う効果（解決編の場面を始める など）
-  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); after(); } };
+  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); actSaid = true; after(); } };
   if (C.card === false) return go();
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="n">${C.label || ''}</div><div class="t">${C.title || ''}</div><div class="tap">タップしてすすむ</div>`;
