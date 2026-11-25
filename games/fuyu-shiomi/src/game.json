@@ -65,7 +65,8 @@
   "meishi": "久我の名刺",
   "photo": "源次の写真",
   "kiroku": "引き揚げ船の記録の写し",
-  "chosho": "昭和16年の調書"
+  "chosho": "昭和16年の調書",
+  "letter": "源次の書き損じの手紙"
  },
  "people": {
   "hayase": {
@@ -162,6 +163,18 @@
   "saeki": {
    "name": "佐伯修",
    "short": "佐伯"
+  },
+  "oyaji": {
+   "name": "屋台の親父",
+   "short": "親父"
+  },
+  "hamaya": {
+   "name": "浜屋の主人",
+   "short": "浜屋"
+  },
+  "kokan": {
+   "name": "久我海運の交換手",
+   "short": "交換手"
   }
  },
  "topics": {
@@ -178,7 +191,10 @@
   "fune": "引き揚げ船のこと",
   "shino": "志乃のこと",
   "mukashi": "昔のこと",
-  "zatsudan": "雑談"
+  "zatsudan": "雑談",
+  "kyouki": "凶器のこと",
+  "kuroda": "黒田のこと",
+  "chizuru": "娘のこと"
  },
  "docs": {
   "jikoku": {
