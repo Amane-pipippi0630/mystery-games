@@ -191,7 +191,7 @@
         "card::犯人は黒田圭。合併を守るため遺言書を奪おうとして浅見を刺し、気づいた父・康彦を灯台の崖から突き落とした"
       ]
     },
-    "morning": {
+    "morning": { "bgm": "kamomejima_ending", "bgmKeep": true,
       "bg": "terrace",
       "place": "テラス",
       "pages": [
@@ -219,5 +219,6 @@
         "event:morning"
       ]
     }
-  ]
+  ],
+ "audio": {"bgm": "kamomejima_confront", "hush": true, "amb": {"hall": "amb_room", "salon": "amb_room", "guestroom": "amb_room", "terrace": "amb_calm_sea"}}
 }

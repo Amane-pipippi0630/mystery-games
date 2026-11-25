@@ -421,7 +421,7 @@
     }
   },
   "events": {
-    "carry": {
+    "carry": { "bgm": "common_incident",
       "bg": "cliff",
       "place": "灯台の崖",
       "pages": [

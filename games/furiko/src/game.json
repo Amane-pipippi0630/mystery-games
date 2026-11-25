@@ -193,5 +193,6 @@
    "id": "kamomejima",
    "title": "鴎島館の論理"
   }
- ]
+ ],
+ "audio": {"base": "../../audio/", "credit": "音楽：OpenTracks（旧DOVA-SYNDROME）。音源の抜き出し・転用・再配布は禁止です。", "title": "furiko_daily", "bgm": "furiko_daily", "deduce": "common_deduce", "ending": "furiko_ending", "step": "asphalt", "amb": {"shop": "amb_clocks", "workshop": "amb_clocks", "living": "amb_clocks", "alley": "amb_winter_night", "riverside": "amb_winter_night", "garage": "amb_winter_night", "tofu": "amb_room", "kaikan": "amb_room", "police": "amb_room", "apartment": "amb_room", "lab": "amb_room", "conbini": "amb_room", "cafe": "amb_room", "tel": "amb_room"}}
 }

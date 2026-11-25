@@ -120,5 +120,6 @@
       ],
       "result": "～ 完 ～\n\n行動回数：{turns}\nまちがった指名：{miss}回\n評価：{rank}\n\n遊んでくれてありがとう！"
     }
-  }
+  },
+ "audio": {"base": "../../audio/", "credit": "音楽：OpenTracks（旧DOVA-SYNDROME）。音源の抜き出し・転用・再配布は禁止です。", "title": "shiomi_daily", "bgm": "shiomi_daily", "deduce": "common_deduce", "ending": "shiomi_ending", "step": "asphalt", "amb": {"company": "amb_harbor_now", "study": "amb_room", "living": "amb_room", "station": "amb_room", "mahjong": "amb_room", "hospital": "amb_room", "law": "amb_room"}}
 }

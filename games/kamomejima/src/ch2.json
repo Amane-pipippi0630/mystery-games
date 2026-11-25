@@ -623,7 +623,7 @@
     "clock": "振り子時計の音が、やけに大きく聞こえる。"
   },
   "events": {
-    "breakin": {
+    "breakin": { "bgm": "common_incident",
       "bg": "library",
       "place": "書庫",
       "pages": [

@@ -63,7 +63,7 @@
   },
   "showDefault": "{name}は、それを見つめた。",
   "events": {
-    "open": {
+    "open": { "bgm": "epilogue_ending", "bgmKeep": true,
       "pages": [
         "千鶴は、封筒の封を、そっと切った。",
         "中から出てきたのは、一枚の、黄ばんだ紙だった。手帳と同じ大きさ。端に、破り取った跡。",

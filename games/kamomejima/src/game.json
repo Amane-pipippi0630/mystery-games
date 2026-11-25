@@ -149,5 +149,6 @@
   "notes": {
     "tab": "取材ノート",
     "lead": "創業者・久我誠一郎の伝記のために集めた話"
-  }
+  },
+ "audio": {"base": "../../audio/", "credit": "音楽：OpenTracks（旧DOVA-SYNDROME）。音源の抜き出し・転用・再配布は禁止です。", "title": "kamomejima_daily", "bgm": "kamomejima_daily", "deduce": "common_deduce", "ending": "kamomejima_ending", "step": "wood", "amb": {"pier": "amb_calm_sea", "ferry": "amb_calm_sea", "front": "amb_storm_out", "cliff": "amb_storm_out", "terrace": "amb_storm_out", "hall": "amb_storm_in", "salon": "amb_storm_in", "guestroom": "amb_storm_in", "dining": "amb_storm_in", "corridor": "amb_storm_in", "library": "amb_storm_in", "butler": "amb_storm_in", "asami_room": "amb_storm_in", "safe": "amb_storm_in", "drying": "amb_storm_in"}}
 }

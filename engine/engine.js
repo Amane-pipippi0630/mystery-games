@@ -91,7 +91,7 @@ function run(list) {
   for (const e of list || []) {
     const i = e.indexOf(':'), k = i < 0 ? e : e.slice(0, i), a = i < 0 ? '' : e.slice(i + 1);
     switch (k) {
-      case 'give': if (!S.items.includes(a)) { S.items.push(a); toast('入手：' + D.items[a]); } break;
+      case 'give': if (!S.items.includes(a)) { S.items.push(a); toast('入手：' + D.items[a]); snd.se('note'); } break;
       case 'take': S.items = S.items.filter(x => x !== a); break;
       case 'flag': S.f[a] = 1; break;
       case 'unflag': delete S.f[a]; break;
@@ -107,7 +107,7 @@ function run(list) {
       case 'board': pending.board = a; break;
       case 'choice': pending.choice = a; break;
       case 'search': pending.search = a; break;
-      case 'doc': if (!S.docs) S.docs = []; if (!S.docs.includes(a)) { S.docs.push(a); toast('資料に追加：' + D.docs[a].title); } break;
+      case 'doc': if (!S.docs) S.docs = []; if (!S.docs.includes(a)) { S.docs.push(a); toast('資料に追加：' + D.docs[a].title); snd.se('note'); } break;
       case 'card': { const k = a.indexOf(':'); addCard({ card: a.slice(k + 1) }, { p: a.slice(0, k) || null }); break; }
       default: throw new Error('不明な効果: ' + e);
     }
@@ -151,6 +151,7 @@ function renderScene() {
   if (SIM) return;
   const L = loc();
   updateNbBadge();
+  snd.amb(locAmb());
   setScene(L.bg, L.name, ch().label || '現在地');
   $('here').innerHTML = here(L).map(p => `<span>${person(p).name}</span>`).join('');
 }
@@ -172,15 +173,97 @@ function btns(list, label, mode) {
     const b = document.createElement('button');
     b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>` + (t === '手帳' ? '<b id="nbn" class="badge"></b>' : '');
     if (cls) b.className = cls;
-    b.onclick = fn; c.appendChild(b);
+    b.onclick = t === 'つぎへ' ? fn : e => { snd.se('select'); fn(e); }; c.appendChild(b);
   });
 }
 const back = ['もどる', () => main(), 'back'];
 const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 
+// ---------- 音 ----------
+// game.json の audio: {base, title, bgm, deduce, ending, step, amb: {場所id: 環境音}}。章は audio: {bgm, amb, hush}
+// イベントは "bgm"（そのイベントのあいだ流す。"bgmKeep": true でそのまま）と "hush"（いったん無音にする）
+// ブラウザは最初のタップまで音を出せないので、タップされるまでは「何を流すか」だけ覚えておく
+const snd = (() => {
+  const A = D.audio || null;
+  let ctx = null, on = true, want = { bgm: null, amb: null }, cur = { bgm: null, amb: null }, deduce = false, hushT = null, noteT = 0;
+  const tracks = {}, ses = {};
+  try { on = localStorage.getItem('mg:sound') !== 'off'; } catch (e) {}
+  const VOL = { bgm: 0.5, bgmUnder: 0.38, amb: 0.85, se: 0.7 };
+  const url = n => A.base + n + '.m4a';
+  function track(n, loop) {
+    if (tracks[n]) return tracks[n];
+    const el = new Audio(url(n)); el.loop = loop; el.preload = 'auto';
+    const t = { el, g: null, v: 0 };
+    if (ctx && !ctx.none) { try { const s = ctx.createMediaElementSource(el); t.g = ctx.createGain(); t.g.gain.value = 0; s.connect(t.g).connect(ctx.destination); } catch (e) { t.g = null; } }
+    if (!t.g) el.volume = 0;
+    return (tracks[n] = t);
+  }
+  function setVol(t, v, sec) {
+    t.v = v;
+    if (t.g) { const g = t.g.gain, now = ctx.currentTime; g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(v, now + sec); }
+    else { const from = t.el.volume, t0 = performance.now(); const step = () => { const k = Math.min(1, (performance.now() - t0) / (sec * 1000 || 1)); try { t.el.volume = Math.max(0, Math.min(1, from + (v - from) * k)); } catch (e) {} if (k < 1) requestAnimationFrame(step); }; step(); }
+    if (v > 0 && t.el.paused) t.el.play().catch(() => {});
+    if (v === 0) setTimeout(() => { if (t.v === 0 && !t.hold) t.el.pause(); }, sec * 1000 + 50);
+  }
+  const level = kind => !on ? 0 : kind === 'amb' ? (deduce ? 0 : VOL.amb) : (cur.amb && !deduce ? VOL.bgmUnder : VOL.bgm);
+  function apply(kind, sec = 1.2) {
+    if (!A || !ctx) return;
+    const n = kind === 'bgm' && deduce && A.deduce ? A.deduce : want[kind];
+    if (cur[kind] && cur[kind] !== n) setVol(track(cur[kind], true), 0, sec);
+    cur[kind] = n;
+    if (n) { const t = track(n, !/_ending$/.test(n)); if (t.el.ended) t.el.currentTime = 0; setVol(t, level(kind), sec); }
+  }
+  const refresh = (sec) => { apply('amb', sec); apply('bgm', sec); };
+  function unlock() {
+    if (ctx || !A) return;
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); } catch (e) { ctx = null; }
+    if (!ctx) ctx = { currentTime: 0, none: true };  // Web Audio が無い環境では、要素の音量で鳴らす
+    refresh(0.6);
+  }
+  if (A && !SIM) ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, unlock, { capture: true }));
+  return {
+    get state() { return { on, bgm: cur.bgm || want.bgm, amb: cur.amb || want.amb, deduce, playing: Object.entries(tracks).filter(([, t]) => !t.el.paused && t.v > 0).map(([n, t]) => n + '@' + t.el.currentTime.toFixed(1)) }; },
+    bgm(n) { if (SIM || !A || want.bgm === (n || null)) return; want.bgm = n || null; if (!hushT) apply('bgm'); },
+    amb(n) { if (SIM || !A || want.amb === (n || null)) return; want.amb = n || null; if (!hushT) { apply('amb'); apply('bgm', 1.5); } },
+    // 推理の場面：環境音を止め、推理の曲にする
+    deduce(v) { if (SIM || !A || deduce === !!v) return; deduce = !!v; if (!hushT) refresh(0.8); },
+    // 対峙の前など：すべての音を止め、間をおいてから次の曲
+    hush(ms = 1800) {
+      if (SIM || !A) return;
+      clearTimeout(hushT);
+      if (!ctx) return;
+      Object.values(tracks).forEach(t => setVol(t, 0, 0.6));
+      cur = { bgm: null, amb: null };
+      // 次の曲はタップの最中に鳴らしはじめておく（iPhone はタップの外では新しく鳴らせない）
+      const nb = deduce && A.deduce ? A.deduce : want.bgm, pre = [nb, want.amb].filter(Boolean).map(n => track(n, !/_ending$/.test(n)));
+      pre.forEach(t => { t.hold = true; t.el.play().catch(() => {}); });
+      hushT = setTimeout(() => { hushT = null; pre.forEach(t => { t.hold = false; }); refresh(1.5); }, ms);
+    },
+    se(n) {
+      if (SIM || !A || !on || !ctx) return;
+      if (n === 'note') { const now = Date.now(); if (now - noteT < 400) return; noteT = now; }
+      const key = 'se_' + (n === 'step' ? 'step_' + (A.step || 'asphalt') : n);
+      const el = ses[key] || (ses[key] = new Audio(url(key)));
+      el.volume = VOL.se; el.currentTime = 0; el.play().catch(() => {});
+    },
+    toggle() { on = !on; try { localStorage.setItem('mg:sound', on ? 'on' : 'off'); } catch (e) {} unlock(); refresh(0.4); return on; },
+    get on() { return on; },
+    get enabled() { return !!A; },
+  };
+})();
+const chapterBgm = () => (ch().audio && ch().audio.bgm) || (D.audio && D.audio.bgm) || null;
+const locAmb = () => { const C = ch().audio && ch().audio.amb, G = D.audio && D.audio.amb; return (C && S.loc in C ? C[S.loc] : G && G[S.loc]) || null; };
+function soundBtn(el) {
+  if (!snd.enabled) { el.remove(); return; }
+  const draw = () => { el.textContent = snd.on ? '♪ 音あり' : '♪ 音なし'; el.classList.toggle('off', !snd.on); el.setAttribute('aria-pressed', snd.on ? 'true' : 'false'); };
+  el.onclick = e => { e.stopPropagation(); snd.toggle(); draw(); };
+  draw();
+}
+
 // ---------- 行動 ----------
 function main() {
   if (S.done || SIM) return;
+  snd.deduce(false);
   const cmds = [['移動', moveMenu], ['聞く', askMenu], ['調べる', lookMenu], ['見せる', showMenu]];
   if (ch().think) cmds.push(['考える', think]);
   if (ch().accuse) cmds.push(['推理', accuseMenu]);
@@ -205,14 +288,14 @@ function addNote(rule, meta) {
   if (S.notes.some(n => n.t === rule.note)) return;
   S.notes.push({ c: S.chapter, p: (meta && meta.p) || null, t: rule.note });
   S.v.notes = S.notes.length;
-  toast('取材ノートに書き留めた');
+  toast('取材ノートに書き留めた'); snd.se('note');
 }
 // 証言カード：ルールに "card": true（その文をそのまま）か "card": "要約" を付けると記録される
 function addCard(rule, meta) {
   const t = typeof rule.card === 'string' ? rule.card : rule.text;
   if (S.cards.some(c => c.t === t)) return;
   S.cards.push({ id: rule.cardId || null, c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t, pin: false });
-  toast('証言カードに記録した');
+  toast('証言カードに記録した'); snd.se('note');
   updateNbBadge();
 }
 // 文を出した直後に場面・問い・謎へ移るときは、「つぎへ」をはさんで文を読めるようにする
@@ -222,6 +305,7 @@ let actSaid = false;
 let backTo = null;
 function resumeMenu(rs) {
   if (!rs || SIM || S.done) return main();
+  snd.deduce(false);
   const ps = here();
   if (rs.startsWith('topic:')) {
     const who = rs.slice(6);
@@ -268,6 +352,7 @@ function moveMenu() {
   btns([...ids.map(k => [ch().locations[k].name, () => moveTo(k)]), back], 'どこへ行く？');
 }
 function moveTo(id) {
+  snd.se('step');
   S.loc = id; S.v.turns = (S.v.turns || 0) + 1; pending = {}; openBefore = openLocs();
   runAll(ch().onMove);
   renderScene();
@@ -364,6 +449,7 @@ function showTo(i, p) {
 }
 const accusable = () => ch().accuse.suspects.filter(p => (S.seq['talk:' + p] || 0) > 0);
 function accuseMenu() {
+  snd.deduce(true);
   const A = ch().accuse;
   // 一度でも話を聞いた人だけが選べる
   const list = accusable();
@@ -389,9 +475,13 @@ function playEvent(id) {
   const E = ch().events[id];
   if (SIM) { E.pages.forEach(t => say(t)); pending = {}; openBefore = openLocs(); run(E.do); return after(); }
   if (E.bg || E.place) setScene(E.bg || loc().bg, E.place || loc().name, ch().label || '現在地');
+  if (E.hush) snd.hush(typeof E.hush === 'number' ? E.hush : undefined);
+  if (E.bgm) snd.bgm(E.bgm);
+  if ('amb' in E) snd.amb(E.amb);
   let k = 0;
   const next = () => {
     if (k < E.pages.length) { say(E.pages[k++]); nextBtn(next); return; }
+    if (E.bgm && !E.bgmKeep) snd.bgm(chapterBgm());
     pending = {}; openBefore = openLocs(); run(E.do);
     renderScene(); after();
   };
@@ -419,6 +509,7 @@ function think() {
 // 章の choices: {id: {prompt, label, options: [{label, text, do, ...ルール}]}}。選んだ選択肢のルールを行う
 // まちがいの選択肢は do に "miss" と "choice:同じid" を入れると、もう一度選び直しになる
 function openChoice(id) {
+  snd.deduce(true);
   const Q = ch().choices[id];
   // 選び直しのときは、まちがいの返事を残したまま選択肢だけ出す
   if (Q.prompt && reask !== id) say(Q.prompt, { nolog: true });
@@ -448,6 +539,7 @@ function searchAnswer(id, q) {
   reask = id; act({ text: fmt(Q.none || '「{q}」の記事は見つからなかった。', { q }), do: ['search:' + id] });
 }
 function openSearch(id) {
+  snd.deduce(true);
   const Q = ch().searches[id];
   if (Q.prompt && reask !== id) say(Q.prompt, { nolog: true });
   reask = null;
@@ -462,6 +554,7 @@ function openSearch(id) {
 
 // ---------- 謎解き（番号入力） ----------
 function openPuzzle(id) {
+  snd.deduce(true);
   const P = ch().puzzles[id]; let code = '';
   const disp = () => fmt(P.display, { code: code.padEnd(P.length, '＊') });
   say(P.prompt + '\n' + disp());
@@ -496,6 +589,7 @@ function boardSubmit(id, sel) {
   act({ text: why, do: ['miss'] });
 }
 function openBoard(id) {
+  snd.deduce(true);
   const B = ch().boards[id];
   let sel = [];
   const draw = () => {
@@ -533,7 +627,7 @@ function startChapter(id) {
   resetFor(C);
   store.set('chap:' + id, snapshot((C.label ? C.label + ' ' : '') + (C.title || '') + 'のはじめ'));
   // start.do：章のはじめにすぐ行う効果（解決編の場面を始める など）
-  const go = () => { renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); actSaid = true; after(); } };
+  const go = () => { if (C.audio && C.audio.hush) snd.hush(); snd.bgm(chapterBgm()); renderScene(); say(C.start.text); autosave(); main(); if (C.recap) showRecap(); if (C.start.do) { pending = {}; openBefore = openLocs(); run(C.start.do); actSaid = true; after(); } };
   if (C.card === false) return go();
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="n">${C.label || ''}</div><div class="t">${C.title || ''}</div><div class="tap">タップしてすすむ</div>`;
@@ -545,6 +639,7 @@ function startChapter(id) {
 function ending(id) {
   const E = D.endings[id];
   S.done = true; if (E.clear !== false) markCleared(); autosave();
+  snd.deduce(false); snd.amb(E.amb || null); snd.bgm(E.bgm || (D.audio && D.audio.ending) || null);
   setScene(E.bg, E.place, E.small);
   $('here').innerHTML = '';
   let k = 0;
@@ -595,6 +690,7 @@ function loadList() {
   return rows;
 }
 function hasAnySave() { return loadList().some(r => !r.off); }
+soundBtn($('snd'));
 $('menu').onclick = () => {
   if (!S) return;
   modal('メニュー', [
@@ -613,7 +709,7 @@ function resume(snap) {
   for (const k of ['log', 'cards']) if (!S[k]) S[k] = [];
   S.log = S.log.map(e => Array.isArray(e) ? { c: e[0], l: e[1], p: null, t: e[2] } : e);
   if (S.memo == null) S.memo = '';
-  renderScene(); say(D.resumeText || '捜査を再開した。', { nolog: true }); autosave(); main(); updateNbBadge();
+  snd.bgm(chapterBgm()); renderScene(); say(D.resumeText || '捜査を再開した。', { nolog: true }); autosave(); main(); updateNbBadge();
   if (ch().recap) showRecap();
 }
 
@@ -632,6 +728,7 @@ function toTitle() {
   $('wrap').classList.add('hide'); $('prologue').classList.add('hide');
   const a = store.get('auto');
   t.innerHTML = `<div class="eyebrow">${T.eyebrow || ''}</div><h1>${T.title}</h1><p>${T.lead || ''}</p>`;
+  snd.deduce(false); snd.amb(null); snd.bgm(D.audio && D.audio.title);
   const add = (label, fn, cls) => { const b = document.createElement('button'); b.className = 'big' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = fn; t.appendChild(b); };
   // 前の作品をクリアしていないと遊べない（game.json の requires: [{id, title}]）。URL を直接開いたとき用
   let cl = []; try { cl = JSON.parse(localStorage.getItem('mg:cleared') || '[]'); } catch (e) {}
@@ -643,9 +740,11 @@ function toTitle() {
     return;
   }
   add('はじめから', newGame, 'primary');
+  if (snd.enabled) { const sb = document.createElement('button'); sb.className = 'pill sndt'; t.appendChild(sb); soundBtn(sb); }
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
   if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget));
+  if (D.audio && D.audio.credit) t.insertAdjacentHTML('beforeend', `<p class="credit">${esc(D.audio.credit)}</p>`);
   t.classList.remove('hide');
 }
 function newGame() {
@@ -704,7 +803,7 @@ function openNotebook(tab) {
   m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査手帳')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
-  m.querySelector('.nb-x').onclick = () => { nbSel = null; m.remove(); };
+  m.querySelector('.nb-x').onclick = () => { if (nbSel) snd.deduce(false); nbSel = null; m.remove(); };
   m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; nbSel = null; openNotebook(); });
   document.body.appendChild(m);
   const body = m.querySelector('.nb-body');
@@ -728,11 +827,11 @@ function nbCards(body) {
     const box = document.createElement('div'); box.className = 'nb-contra';
     if (!nbSel) {
       box.innerHTML = '<button class="big primary">矛盾をつく</button><small>食い違っている証言カードを2枚選んで、つきつける</small>';
-      box.querySelector('button').onclick = () => { nbSel = []; openNotebook(); };
+      box.querySelector('button').onclick = () => { nbSel = []; snd.deduce(true); openNotebook(); };
     } else {
       box.innerHTML = `<div class="sel">食い違うカードを2枚選ぶ（${nbSel.length}/2）</div><div class="row2"><button class="big back">やめる</button><button class="big primary" ${nbSel.length === 2 ? '' : 'disabled'}>つきつける</button></div>`;
       const [cancel, go] = box.querySelectorAll('button');
-      cancel.onclick = () => { nbSel = null; openNotebook(); };
+      cancel.onclick = () => { nbSel = null; snd.deduce(false); openNotebook(); };
       go.onclick = () => {
         const ids = nbSel.map(i => S.cards[i].id || ('#' + i)); nbSel = null;
         $('nbook').remove(); contradict(ids);
@@ -930,7 +1029,7 @@ const sim = {
 };
 
 document.title = D.title;
-window.__mg = { get state() { return S; }, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
+window.__mg = { get state() { return S; }, get sound() { return snd.state; }, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();

@@ -100,7 +100,7 @@ if (others.length) {
   w.insertAdjacentHTML('beforeend', '<div class="sec">ほかの事件</div>');
   others.forEach(g => w.appendChild(card(g)));
 }
-w.insertAdjacentHTML('beforeend', '<footer>進み具合とクリアの記録は、このブラウザに保存されます。</footer>');
+w.insertAdjacentHTML('beforeend', '<footer>進み具合とクリアの記録は、このブラウザに保存されます。<br>音楽：OpenTracks（旧DOVA-SYNDROME）の素材を使っています。音源の抜き出し・転用・再配布は禁止です。</footer>');
 // 「戻る」で戻ってきたとき、押した状態が残らないようにする
 window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 // サムネイルを先に読み込んでおく
