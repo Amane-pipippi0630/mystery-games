@@ -121,3 +121,4 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 #modal .board .row2 .big[disabled]{opacity:.4}
 .nb-entry.doc{padding-right:14px}.nb-entry.doc .txt{white-space:pre-wrap;font-variant-numeric:tabular-nums;line-height:1.7}
 #cmd #sq{grid-column:1/-1;font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:inherit}
+#title .lock{color:var(--accent);margin:18px 0 6px}
