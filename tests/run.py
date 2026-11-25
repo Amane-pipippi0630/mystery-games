@@ -752,29 +752,47 @@ def fuyu_ch8_end(b):
 
 @test
 def epilogue_clear(b):
-    """隠しエピローグ：封筒を届け、汐見の浜で開けると、志乃の手紙で終わる"""
+    """隠しエピローグ：5章を回って封筒を汐見の浜で開け、志乃の手紙で終わる"""
     pg = page(b, EPI)
     pg.click("text=はじめから"); pg.click("#bGo"); advance(pg); pg.click("#card")
     click(pg, "調べる", "祖父の箱"); click(pg, "調べる", "新聞")
     click(pg, "移動", "宮下時計店")
     click(pg, "見せる", "佐伯修の封筒", "宮下千鶴"); assert "もう少し" in msg(pg)
-    click(pg, "聞く", "宮下千鶴", "いまのこと"); click(pg, "聞く", "宮下千鶴", "手帳のこと")
+    click(pg, "聞く", "宮下千鶴", "手帳のこと"); click(pg, "聞く", "宮下千鶴", "母のこと")
+    assert len(state(pg)["docs"]) == 4                      # 取材メモ・手帳2つ・美代子への手紙
     click(pg, "見せる", "佐伯修の封筒", "宮下千鶴")
-    for _ in range(6):
-        click(pg, "つぎへ")
     advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
+    # 第2章：黒田邸と川崎
+    click(pg, "聞く", "黒田タキ", "黒田惣一郎のこと"); click(pg, "聞く", "黒田タキ", "黒田惣一郎のこと")
+    assert "為替" in msg(pg)
+    click(pg, "移動", "野々村家"); click(pg, "聞く", "野々村静", "野々村のこと")
+    click(pg, "移動", "黒田邸"); click(pg, "調べる", "玄関")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
+    # 第3章：汐見
     click(pg, "聞く", "汐見署の警部", "沖田のこと"); click(pg, "聞く", "マコト", "沖田のこと")
-    click(pg, "移動", "佐伯家の墓"); click(pg, "調べる", "墓石")
+    click(pg, "調べる", "沖田の遺品の箱")
+    click(pg, "移動", "磯村の下宿"); click(pg, "聞く", "磯村", "1960年12月のこと"); click(pg, "聞く", "磯村", "六十年のこと")
+    click(pg, "移動", "磯辺町"); click(pg, "聞く", "吾助の孫・健治", "昭和16年の火事")
+    click(pg, "移動", "汐見署"); click(pg, "聞く", "マコト", "いまのこと")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
+    # 第4章：信州
+    click(pg, "聞く", "信州の寺の住職", "本物の久我誠一郎"); click(pg, "聞く", "信州の寺の住職", "父のこと")
+    click(pg, "移動", "寺の墓地"); click(pg, "調べる", "名前のない小さな石")
+    click(pg, "移動", "寺の本堂"); click(pg, "調べる", "山門")
+    advance(pg); pg.click("#card"); pg.click("#modal >> text=つづける")
+    # 終章
+    click(pg, "調べる", "墓石"); click(pg, "聞く", "宮下千鶴", "これからのこと")
     click(pg, "移動", "汐見の浜"); click(pg, "調べる", "波打ちぎわ")
     texts = []
-    for _ in range(25):
+    for _ in range(40):
         if pg.locator("#cmd button", has_text="タイトルへ").count():
             break
         texts.append(msg(pg)); click(pg, "つぎへ")
+    assert any("名前は、聞かないでおきます" in t for t in texts)
     assert any("毎月来てくれてありがとう" in t for t in texts)
+    assert len(state(pg)["docs"]) == 7
     assert "汐見ミステリー 完" in msg(pg)
     return pg.errs
-
 
 if __name__ == "__main__":
     import subprocess
