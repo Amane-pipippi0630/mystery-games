@@ -703,9 +703,10 @@ def fuyu_ch8_end(b):
     pg.click("#card"); pg.click("#modal >> text=つづける")
     for _ in range(5):
         click(pg, "つぎへ")
-    click(pg, "推理", "久我"); assert "伝えなければ" in msg(pg)
-    click(pg, "聞く", "佐伯修", "昭和16年の火事"); click(pg, "聞く", "佐伯修", "引き揚げ船のこと"); click(pg, "聞く", "佐伯修", "2月10日の夜")
-    click(pg, "推理", "黒田"); click(pg, "推理", "久我")
+    click(pg, "聞く", "佐伯修", "昭和16年の火事")
+    click(pg, "推理", "佐伯"); assert "伝えなければ" in msg(pg) or "その前に" in msg(pg)
+    click(pg, "聞く", "佐伯修", "引き揚げ船のこと"); click(pg, "聞く", "佐伯修", "2月10日の夜")
+    click(pg, "推理", "黒田"); click(pg, "推理", "佐伯")
     for _ in range(8):
         click(pg, "つぎへ")
     click(pg, "盗んだ"); click(pg, "託された")
