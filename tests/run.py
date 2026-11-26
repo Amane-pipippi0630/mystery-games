@@ -899,6 +899,26 @@ def hub_debug(b):
     return pg.errs
 
 
+@test
+def debug_flow(b):
+    """?debug で遊ぶと「進み具合」が出て、いまの章の行動が段階ごとに、済・今できる・まだで分かれる"""
+    pg = page(b, KAMO)
+    assert pg.locator(".pill.dbg").count() == 0                   # ふだんは出ない
+    pg = page(b, KAMO + "?debug")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg)
+    if pg.locator("#card").is_visible(): pg.click("#card")
+    pg.click(".pill.dbg")
+    assert pg.locator("#flow .fl-col").count() >= 2 and pg.locator("#flow .fl-n.now").count() >= 1
+    pg.locator("#flow .fl-n").last.click()
+    assert pg.locator("#flow .fl-n.sel").count() == 1 and pg.locator("#flow .fl-n.up").count() >= 1
+    pg.select_option("#flow select", "ch4")
+    assert pg.locator("#flow .fl-n").count() > 5 and pg.locator("#flow .fl-n.now").count() == 0   # ほかの章は色分けなし
+    pg.click("#flow .fl-x"); assert pg.locator("#flow").count() == 0
+    for cid in pg.evaluate("Object.keys(window.__mg.D.chapters)"):
+        assert pg.evaluate(f"window.__mg.flow('{cid}').nodes.length") > 0, cid
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
     for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:

@@ -88,7 +88,7 @@ function card(g, opt = {}) {
     if (opt.locked) return toast(opt.msg || '三部作をすべてクリアすると開きます');
     if (soon) return toast('ただいま準備中です');
     b.classList.add('going'); document.querySelectorAll('.game').forEach(x => x.disabled = true);
-    setTimeout(() => { location.href = g.path; }, 150);
+    setTimeout(() => { location.href = g.path + (/[?&]debug\b/.test(location.search) ? '?debug' : ''); }, 150);
   };
   return b;
 }
