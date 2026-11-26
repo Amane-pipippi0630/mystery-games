@@ -492,8 +492,16 @@ function flowGraph(cid) {
   const needs = src => {
     const out = [];
     if (!src) return out;
-    const re = /(!?)\s*([a-z]+):([A-Za-z0-9_\-]+)/g; let m;
-    while ((m = re.exec(src))) if (!m[1] && ['flag', 'has', 'var'].includes(m[2])) out.push((m[2] === 'has' ? 'item' : m[2]) + ':' + m[3]);
+    const re = /(!?)\s*([a-z]+):([A-Za-z0-9_\-]+)(?:\s*(>=|<=|==|!=|>|<)\s*(-?\d+))?/g; let m;
+    while ((m = re.exec(src))) {
+      const [, neg, k, n, op, num] = m;
+      if (neg || !['flag', 'has', 'var'].includes(k)) continue;
+      if (k !== 'var') { out.push((k === 'has' ? 'item' : k) + ':' + n); continue; }
+      // 数（何日目など）は「その値まで進んだか」で見る。小さいほう・ちがう値の条件は進みではないので数えない
+      if (!op) out.push('var:' + n);
+      else if (op === '==' || op === '>=') { if (+num > 0) out.push('var:' + n + '=' + num); }
+      else if (op === '>') out.push('var:' + n + '=' + (+num + 1));
+    }
     return out;
   };
   const gives = r => {
@@ -502,7 +510,8 @@ function flowGraph(cid) {
       const i = e.indexOf(':'), k = e.slice(0, i), a = e.slice(i + 1);
       if (k === 'flag') g.push('flag:' + a);
       else if (k === 'give') g.push('item:' + a);
-      else if (k === 'set' || k === 'inc') g.push('var:' + a.split('=')[0]);
+      else if (k === 'set') { const [n, v] = a.split('='); if (+v > 0) g.push('var:' + n + '=' + v); }
+      else if (k === 'inc') g.push('var:' + a);
       else if (k === 'doc') g.push('doc:' + a);
       else if (['event', 'puzzle', 'choice', 'search', 'board'].includes(k)) g.push('go:' + k + ':' + a);
       else if (k === 'chapter' || k === 'ending') g.push(k + ':' + a);
@@ -517,7 +526,20 @@ function flowGraph(cid) {
     nodes.push(n);
     g.forEach(x => { (res[x] = res[x] || []).push(n.id); });
   };
-  const each = (e, fn) => { if (e == null || typeof e === 'string') return; if (Array.isArray(e)) e.forEach(fn); else if (e.seq) e.seq.forEach(fn); else fn(e); };
+  // ルールの配列は、前のルールに当てはまらなかったときだけ次へ進む。
+  // 前に「var:day==1」「var:day==2」だけのルールがあれば、後ろのルールは「3日目から」と読む
+  const implied = (arr, i) => {
+    const ex = {}, out = [];
+    arr.slice(0, i).forEach(r => {
+      const m = r && r.if && r.if.trim().match(/^var:([A-Za-z0-9_\-]+)\s*(==|<=|<)\s*(\d+)$/);
+      if (!m) return;
+      const [, n, op, v] = m; (ex[n] = ex[n] || new Set());
+      if (op === '==') ex[n].add(+v); else for (let k = 0; k <= (op === '<=' ? +v : +v - 1); k++) ex[n].add(k);
+    });
+    for (const n in ex) { let L = 1; while (ex[n].has(L)) L++; if (L > 1) out.push('var:' + n + '=' + L); }
+    return out;
+  };
+  const each = (e, fn) => { if (e == null || typeof e === 'string') return; if (Array.isArray(e)) e.forEach((r, i) => fn(r, implied(e, i))); else if (e.seq) e.seq.forEach(r => fn(r, [])); else fn(e, []); };
   const locNeed = l => (C.locations[l] && C.locations[l].unlock ? needs(C.locations[l].unlock) : []);
   const whereP = p => Object.keys(C.locations).filter(l => (C.locations[l].people || []).some(x => (typeof x === 'string' ? x : x.id) === p));
   // 章のはじめ・きっかけ・移動したとき
@@ -525,18 +547,30 @@ function flowGraph(cid) {
   (C.triggers || []).forEach(r => add('trigger', '条件がそろうと', r));
   (C.onMove || []).forEach(r => add('trigger', '移動したとき', r));
   // 聞く
+  // その場所にその人がいる条件（"people": [{"id": ..., "if": ...}]）
+  // （どこかに条件なしでいる人は、条件なしとみなす）
+  const presentIf = p => {
+    let c = null;
+    for (const L of Object.values(C.locations)) for (const x of L.people || []) {
+      if (x === p || (typeof x !== 'string' && x.id === p && !x.if)) return null;
+      if (typeof x !== 'string' && x.id === p && !c) c = x.if;
+    }
+    return c;
+  };
+  // 今できるか：「ここにいる（here:）」は、行けば満たせるので満たしているとみなす
+  const condAny = src => { try { return cond(String(src).replace(/here:[A-Za-z0-9_\-]+/g, 'true')); } catch (e) { return false; } };
   Object.entries(C.talk || {}).forEach(([p, e]) => {
-    const ls = whereP(p), ln = ls.length === 1 ? locNeed(ls[0]) : [];
-    if (e && e.topics) Object.entries(e.topics).forEach(([t, te]) => each(te, r => add('talk', `聞く：${short(p)}（${(D.topics && D.topics[t]) || t}）`, r, { need: ln, loc: ls[0], p })));
-    else each(e, r => add('talk', `聞く：${short(p)}`, r, { need: ln, loc: ls[0], p }));
+    const ls = whereP(p), pi = presentIf(p), ln = (ls.length === 1 ? locNeed(ls[0]) : []).concat(needs(pi));
+    if (e && e.topics) Object.entries(e.topics).forEach(([t, te]) => each(te, (r, im) => add('talk', `聞く：${short(p)}（${(D.topics && D.topics[t]) || t}）`, r, { need: ln.concat(im), loc: ls[0], p })));
+    else each(e, (r, im) => add('talk', `聞く：${short(p)}`, r, { need: ln.concat(im), loc: ls[0], p }));
   });
   // 調べる
   Object.entries(C.look || {}).forEach(([o, e]) => {
     const L = locOf(o), name = L ? L[1].objs[o] : o;
-    each(e, r => add('look', `調べる：${name}${L ? '（' + L[1].name + '）' : ''}`, r, { need: L ? locNeed(L[0]) : [], loc: L && L[0] }));
+    each(e, (r, im) => add('look', `調べる：${name}${L ? '（' + L[1].name + '）' : ''}`, r, { need: (L ? locNeed(L[0]) : []).concat(im), loc: L && L[0] }));
   });
   // 見せる
-  Object.entries(C.show || {}).forEach(([it, byP]) => Object.entries(byP || {}).forEach(([p, e]) => each(e, r => add('show', `見せる：${(D.items && D.items[it]) || it} → ${short(p)}`, r, { need: ['item:' + it], p }))));
+  Object.entries(C.show || {}).forEach(([it, byP]) => Object.entries(byP || {}).forEach(([p, e]) => each(e, (r, im) => add('show', `見せる：${(D.items && D.items[it]) || it} → ${short(p)}`, r, { need: ['item:' + it].concat(im), p }))));
   // 矛盾
   (C.contradictions || []).forEach(x => add('contra', `矛盾をつく：${x.p ? short(x.p) : ''}`, x, { need: (x.pairs || [])[0] ? x.pairs[0].map(c => 'card:' + c) : [], gives: ['flag:contra_' + x.id], keep: true }));
   // 謎・問い・検索・推理ボード・イベント（ほかの行動から開く）
@@ -564,7 +598,7 @@ function flowGraph(cid) {
     const [k, a] = [x.slice(0, x.indexOf(':')), x.slice(x.indexOf(':') + 1)];
     if (k === 'flag') return !!S.f[a];
     if (k === 'item') return S.items.includes(a);
-    if (k === 'var') return (S.v[a] || 0) > 0;
+    if (k === 'var') { const [n, v] = a.split('='); return (S.v[n] || 0) >= (v === undefined ? 1 : +v); }
     if (k === 'card') return S.cards.some(c => c.id === a);
     if (k === 'doc') return (S.docs || []).includes(a);
     if (k === 'go') return (res[x] || []).some(j => done(nodes[j]));
@@ -583,8 +617,9 @@ function flowGraph(cid) {
     if (done(n)) n.st = 'done';
     else {
       let ok = n.need.every(have);
-      try { if (ok && n.rule && n.rule.if) ok = cond(n.rule.if); } catch (e) {}
-      if (ok && n.loc && C.locations[n.loc].unlock) ok = cond(C.locations[n.loc].unlock);
+      if (ok && n.rule && n.rule.if) ok = condAny(n.rule.if);
+      if (ok && n.kind === 'talk' && n.p) ok = Object.entries(C.locations).some(([l, L]) => (L.people || []).some(x => x === n.p || (typeof x !== 'string' && x.id === n.p && (!x.if || condAny(x.if)))) && condAny(L.unlock));
+      else if (ok && n.loc && C.locations[n.loc].unlock) ok = condAny(C.locations[n.loc].unlock);
       n.st = ok ? 'now' : 'wait';
     }
   });
@@ -596,7 +631,7 @@ const flowWord = x => {
   if (k === 'item') return 'もちもの「' + ((D.items && D.items[a]) || a) + '」';
   if (k === 'card') return '証言カード ' + a;
   if (k === 'doc') return '資料「' + ((D.docs && D.docs[a] && D.docs[a].title) || a) + '」';
-  if (k === 'var') return '数 ' + a;
+  if (k === 'var') { const [n, v] = a.split('='); return v === undefined ? '数 ' + n : n + ' が ' + v + ' に'; }
   if (k === 'chapter') return '次の章へ';
   if (k === 'ending') return 'エンディング';
   if (k === 'go') return ({ event: 'イベント', puzzle: '謎', choice: '問い', search: '検索', board: '推理ボード' })[a.split(':')[0]] + 'が開く';
