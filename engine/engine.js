@@ -293,6 +293,155 @@ function soundPanel(onClose, first) {
   document.body.appendChild(m);
 }
 
+// ---------- デバッグ：進み具合のフローチャート ----------
+// URL に ?debug をつけたときだけ。章のデータから「何をすると → 何が手に入り → 何が開くか」を段階に分けて描く
+const DEBUG = /[?&]debug\b/.test(location.search);
+function flowGraph(cid) {
+  const C = D.chapters[cid], cur = !!S && cid === S.chapter;
+  const nodes = [], res = {};   // res: 資源（フラグ・もちもの・証言カード・場所）→ それを生む行動
+  const locOf = o => Object.entries(C.locations).find(([, L]) => L.objs && o in L.objs);
+  const pick = (r, v) => (r && r[v]) || [];
+  // 条件のうち「そろうと進む」もの（! のついていないもの）
+  const needs = src => {
+    const out = [];
+    if (!src) return out;
+    const re = /(!?)\s*([a-z]+):([A-Za-z0-9_\-]+)/g; let m;
+    while ((m = re.exec(src))) if (!m[1] && ['flag', 'has', 'var'].includes(m[2])) out.push((m[2] === 'has' ? 'item' : m[2]) + ':' + m[3]);
+    return out;
+  };
+  const gives = r => {
+    const g = [];
+    for (const e of (r && r.do) || []) {
+      const i = e.indexOf(':'), k = e.slice(0, i), a = e.slice(i + 1);
+      if (k === 'flag') g.push('flag:' + a);
+      else if (k === 'give') g.push('item:' + a);
+      else if (k === 'set' || k === 'inc') g.push('var:' + a.split('=')[0]);
+      else if (k === 'doc') g.push('doc:' + a);
+      else if (['event', 'puzzle', 'choice', 'search', 'board'].includes(k)) g.push('go:' + k + ':' + a);
+      else if (k === 'chapter' || k === 'ending') g.push(k + ':' + a);
+    }
+    if (r && r.cardId) g.push('card:' + r.cardId);
+    return g;
+  };
+  const add = (kind, label, r, extra = {}) => {
+    const g = (extra.gives || []).concat(gives(r));
+    if (!g.length && !extra.keep) return;
+    const n = { id: nodes.length, kind, label, text: (r && (r.text || r.card)) || '', need: needs(r && r.if).concat(extra.need || []), gives: g, rule: r, loc: extra.loc, p: extra.p, target: extra.target };
+    nodes.push(n);
+    g.forEach(x => { (res[x] = res[x] || []).push(n.id); });
+  };
+  const each = (e, fn) => { if (e == null || typeof e === 'string') return; if (Array.isArray(e)) e.forEach(fn); else if (e.seq) e.seq.forEach(fn); else fn(e); };
+  const locNeed = l => (C.locations[l] && C.locations[l].unlock ? needs(C.locations[l].unlock) : []);
+  const whereP = p => Object.keys(C.locations).filter(l => (C.locations[l].people || []).some(x => (typeof x === 'string' ? x : x.id) === p));
+  // 章のはじめ・きっかけ・移動したとき
+  if (C.start && C.start.do) add('start', '章のはじめ', C.start);
+  (C.triggers || []).forEach(r => add('trigger', '条件がそろうと', r));
+  (C.onMove || []).forEach(r => add('trigger', '移動したとき', r));
+  // 聞く
+  Object.entries(C.talk || {}).forEach(([p, e]) => {
+    const ls = whereP(p), ln = ls.length === 1 ? locNeed(ls[0]) : [];
+    if (e && e.topics) Object.entries(e.topics).forEach(([t, te]) => each(te, r => add('talk', `聞く：${short(p)}（${(D.topics && D.topics[t]) || t}）`, r, { need: ln, loc: ls[0], p })));
+    else each(e, r => add('talk', `聞く：${short(p)}`, r, { need: ln, loc: ls[0], p }));
+  });
+  // 調べる
+  Object.entries(C.look || {}).forEach(([o, e]) => {
+    const L = locOf(o), name = L ? L[1].objs[o] : o;
+    each(e, r => add('look', `調べる：${name}${L ? '（' + L[1].name + '）' : ''}`, r, { need: L ? locNeed(L[0]) : [], loc: L && L[0] }));
+  });
+  // 見せる
+  Object.entries(C.show || {}).forEach(([it, byP]) => Object.entries(byP || {}).forEach(([p, e]) => each(e, r => add('show', `見せる：${(D.items && D.items[it]) || it} → ${short(p)}`, r, { need: ['item:' + it], p }))));
+  // 矛盾
+  (C.contradictions || []).forEach(x => add('contra', `矛盾をつく：${x.p ? short(x.p) : ''}`, x, { need: (x.pairs || [])[0] ? x.pairs[0].map(c => 'card:' + c) : [], gives: ['flag:contra_' + x.id], keep: true }));
+  // 謎・問い・検索・推理ボード・イベント（ほかの行動から開く）
+  Object.entries(C.puzzles || {}).forEach(([id, P]) => add('puzzle', `謎：${P.label || id}`, P.success, { target: 'go:puzzle:' + id, keep: true }));
+  Object.entries(C.choices || {}).forEach(([id, Q]) => (Q.options || []).filter(o => !(o.do || []).some(d => d === 'miss' || d.startsWith('choice:'))).forEach(o => add('choice', `選ぶ：${Q.label || id}「${o.label}」`, o, { target: 'go:choice:' + id, keep: true })));
+  Object.entries(C.searches || {}).forEach(([id, Q]) => (Q.entries || []).forEach(en => add('search', `検索：${Q.label || id}「${(en.keys || [])[0] || ''}」`, en, { target: 'go:search:' + id, keep: true })));
+  Object.entries(C.boards || {}).forEach(([id, B]) => add('board', `推理ボード：${B.title || id}`, B.success, { target: 'go:board:' + id, keep: true }));
+  Object.entries(C.events || {}).forEach(([id, E]) => add('event', `イベント：${(E.pages[0] || '').replace(/\s+/g, ' ').slice(0, 18)}…`, E, { target: 'go:event:' + id, keep: true }));
+  // 開くもの（go:）は、それを開く行動を「必要」にする
+  nodes.forEach(n => { if (n.target) n.need.push(n.target); });
+  // 段階：必要なものを生む行動の、いちばん深い段階 + 1
+  const lv = {};
+  const level = (n, stack = new Set()) => {
+    if (n.id in lv) return lv[n.id];
+    if (stack.has(n.id)) return 0;
+    stack.add(n.id);
+    let L = 0;
+    n.need.forEach(x => (res[x] || []).forEach(j => { if (j !== n.id) L = Math.max(L, level(nodes[j], stack) + 1); }));
+    stack.delete(n.id);
+    return (lv[n.id] = L);
+  };
+  nodes.forEach(n => level(n));
+  // いまの章なら、済んだ・今できる・まだ を決める
+  const have = x => {
+    const [k, a] = [x.slice(0, x.indexOf(':')), x.slice(x.indexOf(':') + 1)];
+    if (k === 'flag') return !!S.f[a];
+    if (k === 'item') return S.items.includes(a);
+    if (k === 'var') return (S.v[a] || 0) > 0;
+    if (k === 'card') return S.cards.some(c => c.id === a);
+    if (k === 'doc') return (S.docs || []).includes(a);
+    if (k === 'go') return (res[x] || []).some(j => done(nodes[j]));
+    return false;
+  };
+  const doneMemo = {};
+  const done = n => {
+    if (n.id in doneMemo) return doneMemo[n.id];
+    doneMemo[n.id] = false;
+    const real = n.gives.filter(g => !g.startsWith('chapter:') && !g.startsWith('ending:'));
+    return (doneMemo[n.id] = real.length > 0 && real.every(have));
+  };
+  nodes.forEach(n => {
+    n.level = lv[n.id];
+    if (!cur) { n.st = ''; return; }
+    if (done(n)) n.st = 'done';
+    else {
+      let ok = n.need.every(have);
+      try { if (ok && n.rule && n.rule.if) ok = cond(n.rule.if); } catch (e) {}
+      if (ok && n.loc && C.locations[n.loc].unlock) ok = cond(C.locations[n.loc].unlock);
+      n.st = ok ? 'now' : 'wait';
+    }
+  });
+  return { nodes, res };
+}
+const flowWord = x => {
+  const i = x.indexOf(':'), k = x.slice(0, i), a = x.slice(i + 1);
+  if (k === 'flag') return a.startsWith('contra_') ? '矛盾' : 'フラグ ' + a;
+  if (k === 'item') return 'もちもの「' + ((D.items && D.items[a]) || a) + '」';
+  if (k === 'card') return '証言カード ' + a;
+  if (k === 'doc') return '資料「' + ((D.docs && D.docs[a] && D.docs[a].title) || a) + '」';
+  if (k === 'var') return '数 ' + a;
+  if (k === 'chapter') return '次の章へ';
+  if (k === 'ending') return 'エンディング';
+  if (k === 'go') return ({ event: 'イベント', puzzle: '謎', choice: '問い', search: '検索', board: '推理ボード' })[a.split(':')[0]] + 'が開く';
+  return x;
+};
+function openFlow(cid = S.chapter) {
+  const old = $('flow'); if (old) old.remove();
+  const { nodes, res } = flowGraph(cid);
+  const m = document.createElement('div'); m.id = 'flow';
+  const lvls = [...new Set(nodes.map(n => n.level))].sort((a, b) => a - b);
+  const count = st => nodes.filter(n => n.st === st).length;
+  const cur = cid === S.chapter;
+  m.innerHTML = `<div class="fl-head"><b>進み具合</b><select aria-label="章">${Object.entries(D.chapters).map(([k, C]) => `<option value="${k}"${k === cid ? ' selected' : ''}>${esc(C.label || k)} ${esc(C.title || '')}${k === S.chapter ? '（いま）' : ''}</option>`).join('')}</select><button class="fl-x" aria-label="とじる">×</button></div>
+    <div class="fl-legend">${cur ? `<span class="done">済 ${count('done')}</span><span class="now">今できる ${count('now')}</span><span class="wait">まだ ${count('wait')}</span><label><input type="checkbox" class="fl-hide"> 済を隠す</label>` : '<span>いまの章ではないので、進み具合の色分けはありません</span>'}</div>
+    <p class="fl-tip">左の段階から右へ進みます。押すと、その行動に必要なもの（上流）と、それで開くもの（下流）が光ります。</p>
+    <div class="fl-cols">${lvls.map(L => `<div class="fl-col"><div class="fl-lv">段階 ${L + 1}</div>${nodes.filter(n => n.level === L).map(n => `<button class="fl-n ${n.st}" data-id="${n.id}"><span class="k">${esc(n.label)}</span>${n.text ? `<span class="t">${esc(n.text.replace(/\s+/g, ' ').slice(0, 40))}${n.text.length > 40 ? '…' : ''}</span>` : ''}<span class="g">→ ${esc([...new Set(n.gives.map(flowWord))].join('、'))}</span></button>`).join('')}</div>`).join('')}</div>`;
+  document.body.appendChild(m);
+  m.querySelector('.fl-x').onclick = () => m.remove();
+  m.querySelector('select').onchange = e => openFlow(e.target.value);
+  const hide = m.querySelector('.fl-hide');
+  if (hide) hide.onchange = () => m.classList.toggle('hide-done', hide.checked);
+  // 押した行動の上流・下流を光らせる
+  const up = id => { const s = new Set(), go = i => nodes[i].need.forEach(x => (res[x] || []).forEach(j => { if (!s.has(j)) { s.add(j); go(j); } })); go(id); return s; };
+  const down = id => { const s = new Set(), go = i => nodes[i].gives.forEach(x => nodes.forEach(n => { if (n.need.includes(x) && !s.has(n.id)) { s.add(n.id); go(n.id); } })); go(id); return s; };
+  m.querySelectorAll('.fl-n').forEach(b => b.onclick = () => {
+    const id = +b.dataset.id, u = up(id), d = down(id), on = b.classList.contains('sel');
+    m.querySelectorAll('.fl-n').forEach(x => x.classList.remove('sel', 'up', 'down', 'dim'));
+    if (on) return;
+    m.querySelectorAll('.fl-n').forEach(x => { const i = +x.dataset.id; x.classList.add(i === id ? 'sel' : u.has(i) ? 'up' : d.has(i) ? 'down' : 'dim'); });
+  });
+}
+
 // ---------- 行動 ----------
 function main() {
   if (S.done || SIM) return;
@@ -727,6 +876,7 @@ function loadList() {
 }
 function hasAnySave() { return loadList().some(r => !r.off); }
 soundBtn($('snd'));
+if (DEBUG) { const fb = document.createElement('button'); fb.className = 'pill dbg'; fb.textContent = '進み具合'; fb.onclick = () => openFlow(); $('hdr-r').prepend(fb); }
 $('menu').onclick = () => {
   if (!S) return;
   modal('メニュー', [
@@ -754,7 +904,7 @@ function resume(snap) {
 function leave(url, btn) {
   if (btn) { btn.classList.add('going'); btn.textContent = '開いています…'; }
   document.body.classList.add('leaving');
-  setTimeout(() => { location.href = url; }, 150);
+  setTimeout(() => { location.href = url + (DEBUG && !/[?&]debug/.test(url) ? (url.includes('?') ? '&' : '?') + 'debug' : ''); }, 150);
 }
 
 // ---------- タイトル ----------
@@ -1065,7 +1215,7 @@ const sim = {
 };
 
 document.title = D.title;
-window.__mg = { get state() { return S; }, get sound() { return snd.state; }, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
+window.__mg = { get state() { return S; }, get sound() { return snd.state; }, flow: cid => flowGraph(cid), openFlow, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();

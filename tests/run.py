@@ -5,6 +5,7 @@
   python3 tests/run.py
 """
 import json
+import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -881,6 +882,43 @@ def sequential_unlock(b):
     return pg.errs + pg2.errs + pg3.errs
 
 
+@test
+def hub_debug(b):
+    """作品選択に ?debug をつけると、クリア記録を切り替えて第二作・第三作・エピローグをすぐ遊べる"""
+    pg = hub_page(b)
+    assert pg.locator(".debug").count() == 0                      # ふだんは出ない
+    pg.goto(HUB + "?debug")
+    pg.click(".debug >> text=第二作までクリア")
+    pg.wait_for_selector(".debug")
+    assert pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))") == ["kamomejima", "furiko"]
+    pg.click(".debug >> text=第三作までクリア")
+    pg.wait_for_selector(".game[data-id=epilogue]")
+    pg.click(".debug >> text=クリア記録なし")
+    pg.wait_for_selector(".debug")
+    assert pg.evaluate("localStorage.getItem('mg:cleared')") == "[]"
+    return pg.errs
+
+
+@test
+def debug_flow(b):
+    """?debug で遊ぶと「進み具合」が出て、いまの章の行動が段階ごとに、済・今できる・まだで分かれる"""
+    pg = page(b, KAMO)
+    assert pg.locator(".pill.dbg").count() == 0                   # ふだんは出ない
+    pg = page(b, KAMO + "?debug")
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg)
+    if pg.locator("#card").is_visible(): pg.click("#card")
+    pg.click(".pill.dbg")
+    assert pg.locator("#flow .fl-col").count() >= 2 and pg.locator("#flow .fl-n.now").count() >= 1
+    pg.locator("#flow .fl-n").last.click()
+    assert pg.locator("#flow .fl-n.sel").count() == 1 and pg.locator("#flow .fl-n.up").count() >= 1
+    pg.select_option("#flow select", "ch4")
+    assert pg.locator("#flow .fl-n").count() > 5 and pg.locator("#flow .fl-n.now").count() == 0   # ほかの章は色分けなし
+    pg.click("#flow .fl-x"); assert pg.locator("#flow").count() == 0
+    for cid in pg.evaluate("Object.keys(window.__mg.D.chapters)"):
+        assert pg.evaluate(f"window.__mg.flow('{cid}').nodes.length") > 0, cid
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
     for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:
@@ -888,7 +926,8 @@ if __name__ == "__main__":
     ok = 0
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for fn in results:
+        only = [a for a in sys.argv[1:] if not a.startswith("-")]  # 名前の一部を渡すと、そのテストだけ
+        for fn in [f for f in results if not only or any(o in f.__name__ for o in only)]:
             try:
                 errs = fn(b)
                 assert not errs, errs
@@ -897,5 +936,6 @@ if __name__ == "__main__":
             except Exception as e:
                 print("NG  ", fn.__doc__, "→", repr(e)[:300])
         b.close()
-    print(f"{ok}/{len(results)} 件 OK")
-    raise SystemExit(0 if ok == len(results) else 1)
+    n = len([f for f in results if not only or any(o in f.__name__ for o in only)])
+    print(f"{ok}/{n} 件 OK")
+    raise SystemExit(0 if ok == n else 1)
