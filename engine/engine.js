@@ -165,17 +165,29 @@ const IC = {
   '考える': '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
   '手帳': '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h5M10 12h5"/>',
 };
+// ボタンは2種類：中身が変わるもの（人・物・話題・場所・選択肢）と、いつも同じもの（記録・もどる）。
+// 一覧では、いつも同じもの（cls が nb / back）を線の下にまとめて、別の形で出す
+const SYS = cls => /\b(nb|back)\b/.test(cls || '');
+function btn(t, fn, cls, icon) {
+  const b = document.createElement('button');
+  const nb = /\bnb\b/.test(cls || '');
+  const ic = icon ? IC[t] : nb ? IC['手帳'] : null;
+  b.innerHTML = (ic ? `<svg viewBox="0 0 24 24">${ic}</svg>` : '') + `<span>${t}</span>` + (nb ? '<b id="nbn" class="badge"></b>' : '');
+  if (cls) b.className = cls;
+  b.onclick = t === 'つぎへ' ? fn : e => { snd.se('select'); fn(e); };
+  return b;
+}
 function btns(list, label, mode) {
   if (SIM) return;
   const c = $('cmd'); c.innerHTML = ''; c.className = mode || (label ? 'list' : '');
   if (label) { const d = document.createElement('div'); d.className = 'label'; d.textContent = label; c.appendChild(d); }
-  list.forEach(([t, fn, cls]) => {
-    const b = document.createElement('button');
-    b.innerHTML = (IC[t] && !label ? `<svg viewBox="0 0 24 24">${IC[t]}</svg>` : '') + `<span>${t}</span>` + (t === '手帳' ? '<b id="nbn" class="badge"></b>' : '');
-    if (cls) b.className = cls;
-    b.onclick = t === 'つぎへ' ? fn : e => { snd.se('select'); fn(e); }; c.appendChild(b);
-  });
+  const foot = label ? list.filter(x => SYS(x[2])) : [];
+  list.filter(x => !foot.includes(x)).forEach(([t, fn, cls]) => c.appendChild(btn(t, fn, cls, !label && IC[t])));
+  if (foot.length) { const f = document.createElement('div'); f.className = 'foot'; foot.forEach(([t, fn, cls]) => f.appendChild(btn(t, fn, cls))); c.appendChild(f); }
 }
+// 記録（証言カード・もちもの・会話ログ）を開くボタン。名前は章ごと（nbLabel）。物語の「手帳」と混ざらないように、ことばに「手帳」は使わない
+const nbLabel = () => (S && ch().nbLabel) || D.nbLabel || 'メモ';
+const nbB = () => [nbLabel(), () => openNotebook(), 'nb'];
 const back = ['もどる', () => main(), 'back'];
 const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 
@@ -449,7 +461,7 @@ function main() {
   const cmds = [['移動', moveMenu], ['聞く', askMenu], ['調べる', lookMenu], ['見せる', showMenu]];
   if (ch().think) cmds.push(['考える', think]);
   if (ch().accuse) cmds.push(['推理', accuseMenu]);
-  cmds.push(['手帳', () => openNotebook()]);
+  cmds.push([nbLabel(), () => openNotebook(), 'nb main']);
   btns(cmds);
   updateNbBadge();
 }
@@ -566,8 +578,7 @@ function hasNewTalk(p, heard) {
 }
 const heardSet = () => new Set(S.log.map(e => e.t));
 // 聞いている途中でも手帳を開けるようにする（増えた証言カードの数も見える）
-const nbBtn = ['手帳', () => openNotebook()];
-function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), nbBtn, back], 'だれに聞く？'); updateNbBadge(); }
+function askMenu() { btns([...here().map(p => [person(p).name, () => talk(p)]), nbB(), back], 'だれに聞く？'); updateNbBadge(); }
 // 助手（game.json の assistant）に聞くと、この場所でまだ大事な話を聞いていない人を教えてくれる
 function assistantHint(tmpl) {
   const heard = heardSet();
@@ -583,7 +594,7 @@ function talk(p) {
   if (hint) { bumpTalk(p); S.v.hints = (S.v.hints || 0) + 1; backTo = 'ask'; return act(hint, { p }); }
   if (e && e.topics) {
     const ts = topicsOf(p);
-    btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), nbBtn, ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
+    btns([...ts.map(t => [(D.topics && D.topics[t]) || t, () => talkTopic(p, t)]), nbB(), ['もどる', askMenu, 'back']], person(p).name + 'に、何を聞く？');
     return updateNbBadge();
   }
   backTo = 'ask';
@@ -615,7 +626,7 @@ function talkTopic(p, t) {
   bumpTalk(p);
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
-function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), nbBtn, back], '何を調べる？'); updateNbBadge(); }
+function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), nbB(), back], '何を調べる？'); updateNbBadge(); }
 // 調べたあとも「何を調べる？」に残る
 function look(o) {
   backTo = 'look';
@@ -700,7 +711,7 @@ function openChoice(id) {
   if (Q.prompt && reask !== id) say(Q.prompt, { nolog: true });
   reask = null;
   // 選ぶ前に手帳（資料・証言カード）を見返せる
-  btns([...Q.options.map((o, i) => [o.label, () => choose(id, i)]), ['手帳を見る', () => openNotebook(), 'back']], Q.label || '選ぶ');
+  btns([...Q.options.map((o, i) => [o.label, () => choose(id, i)]), nbB()], Q.label || '選ぶ');
 }
 let reask = null;
 function choose(id, i) {
@@ -732,9 +743,9 @@ function openSearch(id) {
   c.insertAdjacentHTML('beforeend', `<div class="label">${esc(Q.label || 'ことばで探す')}</div><input id="sq" type="search" enterkeyhint="search" placeholder="${esc(Q.placeholder || '例：会社の名前')}" autocomplete="off">`);
   const go = () => searchAnswer(id, $('sq').value);
   $('sq').onkeydown = e => { if (e.key === 'Enter') go(); };
-  [['探す', go, 'primary'], ['手帳を見る', () => openNotebook(), 'back'], ['やめる', () => main(), 'back']].forEach(([t, fn, cls]) => {
-    const b = document.createElement('button'); b.className = cls; b.innerHTML = `<span>${t}</span>`; b.onclick = fn; c.appendChild(b);
-  });
+  const sb = btn('探す', go, 'primary'); sb.onclick = go; c.appendChild(sb);
+  const f = document.createElement('div'); f.className = 'foot';
+  f.appendChild(btn(...nbB())); f.appendChild(btn('やめる', () => main(), 'back')); c.appendChild(f);
 }
 
 // ---------- 謎解き（番号入力） ----------
@@ -986,7 +997,7 @@ function openNotebook(tab) {
   if (old) old.remove();
   const m = document.createElement('div'); m.id = 'nbook'; m.dataset.tab = nbTab;
   const tabs = [['cards', '証言カード'], ...(D.notes ? [['notes', D.notes.tab || '取材ノート']] : []), ['log', '会話ログ'], ...(D.docs ? [['docs', '資料']] : []), ['items', 'もちもの'], ['memo', 'メモ'], ['story', 'これまで']];
-  m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査手帳')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
+  m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査メモ')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
   m.querySelector('.nb-x').onclick = () => { if (nbSel) snd.deduce(false); nbSel = null; m.remove(); };

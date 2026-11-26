@@ -1,4 +1,5 @@
 {
+ "nbLabel": "取材メモ",
  "id": "epilogue",
  "title": "最後のページ",
  "hub": "../../index.html",
@@ -10,7 +11,7 @@
   "ch4",
   "ch5"
  ],
- "nbTitle": "三島陽の取材手帳",
+ "nbTitle": "三島陽の取材メモ",
  "titleScreen": {
   "eyebrow": "汐見ミステリー 隠しエピローグ",
   "title": "最後の<br>ページ",

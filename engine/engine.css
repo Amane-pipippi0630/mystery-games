@@ -160,3 +160,11 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 #flow .fl-n.sel{outline:2px solid #fff}#flow .fl-n.up{outline:2px solid #6aa9ff}#flow .fl-n.down{outline:2px solid #c77dff}#flow .fl-n.dim{opacity:.3}
 #flow.hide-done .fl-n.done{display:none}
 @media (max-width:600px){#flow .fl-cols{flex-direction:column;align-items:stretch}#flow .fl-col{flex:none}#flow .fl-lv{position:static}}
+/* いつも同じボタン（記録・もどる）は、一覧の線の下にまとめる。記録はもどる（点線）とも中身のボタン（塗り）ともちがう、金色の枠 */
+#cmd .foot{grid-column:1/-1;display:flex;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+#cmd .foot button{flex:1;min-height:46px;flex-direction:row;justify-content:center;gap:7px;padding:8px 12px}
+#cmd button.nb{background:transparent;border:1.5px solid var(--accent);color:var(--accent);position:relative}
+#cmd .foot button.nb{border-radius:999px}
+#cmd .foot button.nb svg{width:18px;height:18px}
+#cmd button.nb:active{background:#2a2414}
+#cmd .foot .badge{top:-8px;right:-4px}

@@ -159,7 +159,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 
 ## 捜査手帳
 
-画面下のコマンド「手帳」から開く。新しい証言カードがあると、数がバッジで出る。
+画面下のコマンドの記録ボタン（名前は章ごとの `nbLabel`。金色の枠）から開く。新しい証言カードがあると、数がバッジで出る。「だれに聞く？」「何を調べる？」などの一覧では、記録ボタンと「もどる」は、中身のボタン（人・物・話題）と分けて線の下に並ぶ。
 
 | タブ | 内容 |
 |---|---|
@@ -185,7 +185,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | 考える | 章に `"think": ルール`（`hints` も使える）を書くと、コマンドに「考える」が出る。まず `thinkHint`（`{name}` 入り）で聞き残しを教え、なければ think の文。助手のいない章（倒叙の犯人視点など）のヒント役 |
 | 選択式の問い | 章に `"choices": {id: {prompt, label, options: [{label, text, do}]}}`。効果 `choice:id` で出す。まちがいは `do` に `"miss", "choice:id"` で選び直し。選ぶ前に「手帳を見る」で資料を見返せる |
 | 資料 | game.json に `"docs": {id: {title, text}}`。効果 `doc:id` で手帳の「資料」タブに加わる（表や数字を見ながら謎を解く用） |
-| 手帳の名前 | game.json か章に `"nbTitle"`（既定は「捜査手帳」） |
+| 記録の名前 | game.json か章に `"nbLabel"`（ボタンの短い名前。既定は「メモ」）と `"nbTitle"`（開いたときの題。既定は「捜査メモ」）。物語に「手帳」が出てくることがあるので、ことばに「手帳」は使わない |
 | 答えの幅 | 謎解きに `"answers": ["1740", "1745", "1750"]` を書くと、answer のほかにも正解にする（計算の丸めの違いを許す） |
 | 視点の切り替え | 章に `"freshNotebook": true` を書くと、その章のはじめに証言カード・もちもの・資料を空にする（会話ログとメモは残る）。倒叙で犯人側から刑事側へ移るとき用 |
 | 記事の検索 | 章に `"searches": {id: {label, prompt, placeholder, entries: [{keys: [ことば…], text, do}], none}}`。効果 `search:id` で入力欄が出る。入力に keys のどれかが含まれれば、そのルール（`if` も使える）。検索した回数は `var:searches` |

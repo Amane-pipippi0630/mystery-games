@@ -1,4 +1,5 @@
 {
+ "nbLabel": "捜査メモ",
  "id": "furiko",
  "title": "振り子の止まる夜",
  "hub": "../../index.html",
@@ -63,7 +64,7 @@
  "hintTopic": "hint",
  "assistantHint": "宇佐美「{name}さん、まだ何か話してくれそうですよ。いろんな話題で聞いてみましょう」",
  "talkDefault": "{name}は、いまは話す気がなさそうだ。",
- "nbTitle": "捜査手帳",
+ "nbTitle": "桐生の捜査メモ",
  "items": {
   "techou": "鳶色の手帳",
   "carkey": "長尾の車の鍵",
