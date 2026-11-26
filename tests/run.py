@@ -52,12 +52,14 @@ def dismiss(pg):
 
 
 def click(pg, *names):
+    # 「手帳」「手帳を見る」は、記録を開くボタン（名前は章ごとに変わる）
+    pick = lambda n: pg.locator("#cmd button.nb") if n in ("手帳", "手帳を見る") else pg.locator("#cmd button", has_text=n)
     for n in names:
         if n == "つぎへ" and (overlay(pg) or not pg.locator("#cmd button", has_text="つぎへ").count()):
             continue  # 章の扉や結果が出ているとき、つぎへが無いときは何もしない
         # 文のあとに「つぎへ」がはさまっていたら、目当てのボタンが出るまで進める
         for _ in range(30):
-            if n == "つぎへ" or pg.locator("#cmd button", has_text=n).count():
+            if n == "つぎへ" or pick(n).count():
                 break
             if pg.locator("#cmd button", has_text="つぎへ").count():
                 pg.locator("#cmd button", has_text="つぎへ").first.click()
@@ -66,7 +68,7 @@ def click(pg, *names):
                 pg.locator("#cmd button", has_text="もどる").first.click()
             else:
                 break
-        pg.locator("#cmd button", has_text=n).first.click()
+        pick(n).first.click()
 
 
 def overlay(pg):
