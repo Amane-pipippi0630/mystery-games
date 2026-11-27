@@ -946,6 +946,28 @@ def debug_jump(b):
     return pg.errs
 
 
+@test
+def item_info(b):
+    """もちものを押すと説明が開く。調べが進むと説明が変わる（冬の汐見の新聞の切り抜き）"""
+    pg = page(b, FUYU)
+    pg.click("text=はじめから"); pg.click("#bGo"); advance(pg)
+    if pg.locator("#card").is_visible(): pg.click("#card")
+    pg.evaluate("() => { const m = window.__mg; m.state.items.push('kirinuki', 'hanken'); m.openNotebook(); }")
+    pg.click("#nbook >> text=もちもの")
+    it = pg.locator("#nbook details.item", has_text="新聞の切り抜き")
+    assert not it.locator(".desc").is_visible()
+    it.locator("summary").click()
+    assert "裏には、汐見の呉服店の広告" in it.locator(".desc").inner_text()
+    pg.locator("#nbook .nb-x").click()
+    pg.evaluate("() => { const m = window.__mg; m.state.f.article = true; m.openNotebook(); }")
+    pg.click("#nbook >> text=もちもの")
+    it = pg.locator("#nbook details.item", has_text="新聞の切り抜き")
+    assert it.locator(".desc").is_visible() and "新社屋落成" in it.locator(".desc").inner_text()   # 開いたまま、説明が進む
+    box = it.bounding_box(); assert box["x"] >= 0 and box["x"] + box["width"] <= 390
+    pg.screenshot(path="/tmp/items.png")
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
     for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:
