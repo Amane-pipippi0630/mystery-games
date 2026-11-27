@@ -18,7 +18,8 @@
 | `furiko_ending` | [優しくなれたら](https://opentracks.com/bgm/detail/23612) | 蒲鉾さちこ | 振り子の止まる夜：エンディング |
 | `fuyu_daily` | [捜査会議](https://opentracks.com/bgm/detail/13973) | 田中芳典 | 冬の汐見：捜査 |
 | `fuyu_confront` | [Casablanca](https://opentracks.com/bgm/detail/1771) | 稿屋 隆 | 冬の汐見：第8章 |
-| `fuyu_ending` | [埠頭/Wharf](https://opentracks.com/bgm/detail/12385) | 田中芳典 | 冬の汐見：エンディング |
+| `fuyu_final` | [深々と、降る。](https://opentracks.com/bgm/detail/21570) | のる | 冬の汐見：第8章の推理 |
+| `fuyu_ending` | [lost memories](https://opentracks.com/bgm/detail/19610) | のる | 冬の汐見：エンディング |
 | `epilogue_daily` | [或る雨の夜](https://opentracks.com/bgm/detail/23966) | のる | 最後のページ：訪ね歩き |
 | `epilogue_ending` | [懐かしい物語](https://opentracks.com/bgm/detail/3954) | t.tam | 最後のページ：第5章とエンディング |
 | `shiomi_daily` | [情報屋](https://opentracks.com/bgm/detail/22801) | Heitaro Ashibe | 汐見港殺人事件：捜査 |
@@ -26,6 +27,19 @@
 
 蒲鉾さちこさん・ハモおたさんは独自の利用条件（AI学習・再配布・大幅な改変の禁止）があり、この使い方はその範囲内です。
 
-## 環境音・効果音（`amb_*`・`se_*`）
+## 環境音（冬の汐見・OpenTracks の効果音）
+
+同じライセンスで使っています。m4a に変換し、ループ用に終わりと頭を重ねる・音量をそろえる・いくつかを重ねる、だけの編集です。
+
+| ファイル | 素材 | 制作 | 使う場所 |
+|---|---|---|---|
+| `amb_train` | [電車輪](https://opentracks.com/se/detail/182) | 稿屋 隆 | 冬の汐見：東京駅・車掌区 |
+| `amb_fuyu_wind` | [木枯らし・風に吹かれる落ち葉](https://opentracks.com/se/detail/965) | Causality Sound | 冬の汐見：物干し場・屋台・町工場 |
+| `amb_harbor_winter` | [砂浜の波の音](https://opentracks.com/se/detail/1337)（Hupple）＋[霧笛](https://opentracks.com/se/detail/425)（稿屋 隆） | | 冬の汐見：磯辺町・戸川家・かもめ・浜屋・佐伯家の墓・汐見の浜 |
+| `amb_fuyu_temple` | 木枯らし（上）＋[除夜の鐘の音](https://opentracks.com/se/detail/1136)（NaruIDEA） | | 冬の汐見：信州の寺 |
+
+冬の汐見の屋内（署・新聞社・役所・会社・宿・下宿など）は、環境音なし。
+
+## 環境音・効果音（そのほかの `amb_*`・`se_*`）
 
 プログラムで合成したもの（雑音・正弦波の組み合わせ）。選択音と手帳の更新音のピアノは、[midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) の FluidR3_GM（MIT）の単音を使っています。

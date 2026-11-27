@@ -809,6 +809,7 @@ def fuyu_ch8_end(b):
     click(pg, "聞く", "佐伯修", "引き揚げ船のこと"); click(pg, "聞く", "佐伯修", "2月10日の夜")
     click(pg, "推理", "黒田"); click(pg, "推理", "佐伯")
     click(pg, "つぎへ"); click(pg, "つぎへ")
+    sd = pg.evaluate("window.__mg.sound"); assert sd["deduce"] and sd["bgm"] == "fuyu_final", sd   # 第8章の推理は専用の曲
     click(pg, "佐伯本人"); click(pg, "秘書の野々村"); click(pg, "つぎへ")
     click(pg, "ホテルの押し入れ"); click(pg, "つぎへ"); click(pg, "つぎへ")
     click(pg, "久我海運の荷札ひも")
@@ -820,6 +821,7 @@ def fuyu_ch8_end(b):
             break
         click(pg, "つぎへ")
     assert "完" in msg(pg) and state(pg)["v"]["miss"] == 3
+    assert pg.evaluate("window.__mg.sound")["bgm"] == "fuyu_ending"
     assert "fuyu-shiomi" in pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))")
     return pg.errs
 
