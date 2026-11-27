@@ -15,7 +15,7 @@ out=[]
 for f in sorted(glob.glob(f'games/{g}/src/ch*.json')):
     C=json.load(open(f)); ch=C['id']
     locs={l['name'] for l in C['locations'].values()}
-    objs={n for l in C['locations'].values() for n in l.get('objs',{}).values()}
+    objs={(n if isinstance(n,str) else n['name']) for l in C['locations'].values() for n in l.get('objs',{}).values()}
     names=topics|items|people|docs|TAB|locs|objs
     # also allow short location fragments
     for p,t in texts(C,ch):

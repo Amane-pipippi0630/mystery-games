@@ -48,6 +48,12 @@ footer{color:#5c6370;font-size:11px;text-align:center;margin-top:24px}
 .debug h2{font-size:15px;color:#e0a43a}
 .debug p{font-size:12px;color:#8a93a3;line-height:1.6}
 .debug button{font:inherit;font-size:14px;padding:12px;border-radius:12px;border:1px solid #3a4254;background:#1b2130;color:#e8e8ea;cursor:pointer;text-align:left}
+#openpop{position:fixed;inset:0;z-index:20;background:#000a;display:flex;align-items:center;justify-content:center;padding:24px}
+#openpop .sheet{width:100%;max-width:340px;background:#161b26;border:1px solid #e0a43a;border-radius:20px;padding:22px 20px 18px;text-align:center}
+#openpop .eyebrow{color:#e0a43a;font-size:12px;letter-spacing:.2em}
+#openpop h3{font-family:'Shippori Mincho',serif;font-size:19px;margin:6px 0 12px}
+#openpop .t{font-size:16px;font-weight:700;margin:6px 0}
+#openpop .ok{margin-top:14px;width:100%;font:inherit;font-weight:700;font-size:15px;padding:12px;border-radius:999px;border:0;background:#e0a43a;color:#1a1405;cursor:pointer}
 </style>
 </head>
 <body>
@@ -103,6 +109,21 @@ const others = H.games.filter(g => !g.trilogy);
 if (others.length) {
   w.insertAdjacentHTML('beforeend', '<div class="sec">ほかの事件</div>');
   others.forEach(g => w.appendChild(card(g)));
+}
+// 新しく開いた作品を知らせる（前の作品をクリアして戻ってきたとき）
+{
+  const opened = H.games.filter(g => g.requires && cleared.includes(g.requires));
+  if (H.epilogue && allDone) opened.push(H.epilogue);
+  const seen = get('mg:opened') || [];
+  const fresh = opened.filter(g => !seen.includes(g.id));
+  try { localStorage.setItem('mg:opened', JSON.stringify(opened.map(g => g.id))); } catch (e) {}
+  if (fresh.length) {
+    const m = document.createElement('div'); m.id = 'openpop';
+    m.innerHTML = `<div class="sheet" role="dialog" aria-label="新しい作品"><div class="eyebrow">NEW</div><h3>新しい作品が開きました</h3>${fresh.map(g => `<p class="t">『${esc(g.title)}』</p>`).join('')}<button class="ok">OK</button></div>`;
+    m.querySelector('.ok').onclick = () => m.remove();
+    m.onclick = e => { if (e.target === m) m.remove(); };
+    document.body.appendChild(m);
+  }
 }
 // デバッグ用：URL に ?debug をつけると、クリア記録を切り替えるボタンが出る（スマホとPCで記録が別々なので）
 if (/[?&]debug\b/.test(location.search)) {
