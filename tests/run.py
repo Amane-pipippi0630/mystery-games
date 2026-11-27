@@ -770,7 +770,7 @@ def furiko_ch8_end(b):
     click(pg, "長尾を憎んで")
     click(pg, "手帳を最後まで読む")
     for _ in range(30):
-        if pg.locator("#cmd button", has_text="タイトルへ").count():
+        if pg.locator("#cmd button", has_text="作品選択へ").count():
             break
         click(pg, "つぎへ")
     assert "完" in msg(pg)
@@ -816,7 +816,7 @@ def fuyu_ch8_end(b):
         click(pg, "つぎへ")
     click(pg, "盗んだ"); click(pg, "託された")
     for _ in range(30):
-        if pg.locator("#cmd button", has_text="タイトルへ").count():
+        if pg.locator("#cmd button", has_text="作品選択へ").count():
             break
         click(pg, "つぎへ")
     assert "完" in msg(pg) and state(pg)["v"]["miss"] == 3
@@ -859,7 +859,7 @@ def epilogue_clear(b):
     click(pg, "移動", "汐見の浜"); click(pg, "調べる", "波打ちぎわ")
     texts = []
     for _ in range(40):
-        if pg.locator("#cmd button", has_text="タイトルへ").count():
+        if pg.locator("#cmd button", has_text="作品選択へ").count():
             break
         texts.append(msg(pg)); click(pg, "つぎへ")
     assert any("名前は、聞かないでおきます" in t for t in texts)
@@ -893,8 +893,13 @@ def hub_debug(b):
     pg.click(".debug >> text=第二作までクリア")
     pg.wait_for_selector(".debug")
     assert pg.evaluate("JSON.parse(localStorage.getItem('mg:cleared'))") == ["kamomejima", "furiko"]
+    # 新しく開いた作品はポップアップで知らせる（一度だけ）
+    pop = pg.inner_text("#openpop"); assert "振り子の止まる夜" in pop and "冬の汐見" in pop, pop
+    pg.click("#openpop .ok"); pg.reload(); pg.wait_for_selector(".debug"); assert pg.locator("#openpop").count() == 0
     pg.click(".debug >> text=第三作までクリア")
     pg.wait_for_selector(".game[data-id=epilogue]")
+    assert "最後のページ" in pg.inner_text("#openpop") and "冬の汐見" not in pg.inner_text("#openpop")
+    pg.click("#openpop .ok")
     pg.click(".debug >> text=クリア記録なし")
     pg.wait_for_selector(".debug")
     assert pg.evaluate("localStorage.getItem('mg:cleared')") == "[]"

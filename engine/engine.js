@@ -181,7 +181,7 @@ function btns(list, label, mode) {
   if (SIM) return;
   const c = $('cmd'); c.innerHTML = ''; c.className = mode || (label ? 'list' : '');
   if (label) { const d = document.createElement('div'); d.className = 'label'; d.textContent = label; c.appendChild(d); }
-  const foot = label ? list.filter(x => SYS(x[2])) : [];
+  const foot = label || mode === 'pad' ? list.filter(x => SYS(x[2])) : [];
   list.filter(x => !foot.includes(x)).forEach(([t, fn, cls]) => c.appendChild(btn(t, fn, cls, !label && IC[t])));
   if (foot.length) { const f = document.createElement('div'); f.className = 'foot'; foot.forEach(([t, fn, cls]) => f.appendChild(btn(t, fn, cls))); c.appendChild(f); }
 }
@@ -391,7 +391,7 @@ function flowGraph(cid) {
   });
   // 調べる
   Object.entries(C.look || {}).forEach(([o, e]) => {
-    const L = locOf(o), name = L ? L[1].objs[o] : o;
+    const L = locOf(o), name = L ? objName(L[1].objs[o]) : o;
     each(e, (r, im) => add('look', `調べる：${name}${L ? '（' + L[1].name + '）' : ''}`, r, { need: (L ? locNeed(L[0]) : []).concat(im), loc: L && L[0] }));
   });
   // 見せる
@@ -471,7 +471,7 @@ function openFlow(cid = S.chapter) {
   const cur = cid === S.chapter;
   m.innerHTML = `<div class="fl-head"><b>進み具合</b><select aria-label="章">${Object.entries(D.chapters).map(([k, C]) => `<option value="${k}"${k === cid ? ' selected' : ''}>${esc(C.label || k)} ${esc(C.title || '')}${k === S.chapter ? '（いま）' : ''}</option>`).join('')}</select><button class="fl-x" aria-label="とじる">×</button></div>
     <div class="fl-legend">${cur ? `<span class="done">済 ${count('done')}</span><span class="now">今できる ${count('now')}</span><span class="wait">まだ ${count('wait')}</span><label><input type="checkbox" class="fl-hide"> 済を隠す</label>` : '<span>いまの章ではないので、進み具合の色分けはありません</span>'}</div>
-    <p class="fl-tip">左の段階から右へ進みます。押すと、その行動に必要なもの（上流）と、それで開くもの（下流）が光ります。</p>
+    <p class="fl-tip">上の段階から下へ進みます。押すと、その行動に必要なもの（上流）と、それで開くもの（下流）が光ります。</p>
     <div class="fl-cols">${lvls.map(L => `<div class="fl-col"><div class="fl-lv">段階 ${L + 1}</div>${nodes.filter(n => n.level === L).map(n => `<button class="fl-n ${n.st}" data-id="${n.id}"><span class="k">${esc(n.label)}</span>${n.text ? `<span class="t">${esc(n.text.replace(/\s+/g, ' ').slice(0, 40))}${n.text.length > 40 ? '…' : ''}</span>` : ''}<span class="g">→ ${esc([...new Set(n.gives.map(flowWord))].join('、'))}</span></button>`).join('')}</div>`).join('')}</div>`;
   document.body.appendChild(m);
   m.querySelector('.fl-x').onclick = () => m.remove();
@@ -535,7 +535,7 @@ let backTo = null;
 function resumeMenu(rs) {
   if (!rs || SIM || S.done) return main();
   snd.deduce(false);
-  if (rs === 'look') return Object.keys(loc().objs || {}).length ? lookMenu() : main();
+  if (rs === 'look') return objsHere().length ? lookMenu() : main();
   const ps = here();
   if (rs.startsWith('topic:')) {
     const who = rs.slice(6);
@@ -661,7 +661,10 @@ function talkTopic(p, t) {
   bumpTalk(p);
   act(r || { text: fmt(ch().talkDefault || D.talkDefault || '{name}は、何も話してくれない。', { name: short(p) }) }, { p });
 }
-function lookMenu() { btns([...Object.entries(loc().objs || {}).map(([o, name]) => [name, () => look(o)]), nbB(), back], '何を調べる？'); updateNbBadge(); }
+// 調べられる物。"objs" の値は名前か {"name": ..., "if": 条件}（条件が合わないあいだは一覧に出さない。運び出した遺体など）
+const objName = v => (typeof v === 'string' ? v : v.name);
+const objsHere = () => Object.entries(loc().objs || {}).filter(([, v]) => typeof v === 'string' || !v.if || cond(v.if));
+function lookMenu() { btns([...objsHere().map(([o, v]) => [objName(v), () => look(o)]), nbB(), back], '何を調べる？'); updateNbBadge(); }
 // 調べたあとも「何を調べる？」に残る
 function look(o) {
   backTo = 'look';
@@ -793,7 +796,7 @@ function openPuzzle(id) {
     code += d;
     if (code.length < P.length) { say(disp()); draw(); }
     else puzzleAnswer(id, code);
-  }]), ['やめる', () => { say(P.cancel || 'やめた。'); main(); }, 'back']], P.label, 'pad');
+  }]), nbB(), ['やめる', () => { say(P.cancel || 'やめた。'); main(); }, 'back']], P.label, 'pad');
   draw();
 }
 
@@ -842,7 +845,10 @@ function openBoard(id) {
     go.disabled = !sel.length; go.onclick = () => { closeModal(); boardSubmit(id, sel); };
     const no = document.createElement('button'); no.className = 'big'; no.textContent = 'あとで';
     no.onclick = () => { closeModal(); main(); };
-    r2.append(no, go);
+    // 推理ボードのまま記録を見返せる（とじるとボードに戻る）
+    const nb = document.createElement('button'); nb.className = 'big nbk'; nb.textContent = nbLabel() + 'を見る';
+    nb.onclick = () => { nbAfter = () => draw(); openNotebook(); };
+    r2.append(no, nb, go);
     document.body.appendChild(m);
   };
   draw();
@@ -879,7 +885,8 @@ function ending(id) {
     setScene(E.finalBg || E.bg, E.finalPlace || '', E.finalSmall || '');
     const rank = ((E.ranks || []).find(r => cond(r.if)) || {}).label || '';
     say(fmt(E.result, { ...S.v, turns: S.v.turns, miss: S.v.miss || 0, rank, time: hm(S.v.playSec), hints: S.v.hints || 0, notes: (S.notes || []).length }));
-    btns([['タイトルへ', toTitle, 'primary']], null, 'one');
+    // クリアしたら作品選択へ（新しく開いた作品は、作品選択で知らせる）
+    btns([D.hub ? ['作品選択へ', e => leave(D.hub, e.currentTarget), 'primary'] : ['タイトルへ', toTitle, 'primary']], null, 'one');
   };
   next();
 }
@@ -1023,6 +1030,8 @@ function updateNbBadge() {
   e.style.display = n > 0 ? '' : 'none';
 }
 let nbTab = 'cards', nbQ = { who: '', place: '', ch: '', pin: false, q: '' };
+// 記録をとじたあとに戻す画面（推理ボードから開いたとき）
+let nbAfter = null;
 function openNotebook(tab) {
   if (tab) nbTab = tab;
   closeModal();
@@ -1035,7 +1044,7 @@ function openNotebook(tab) {
   m.innerHTML = `<div class="nb-head"><h3>${esc(ch().nbTitle || D.nbTitle || '捜査メモ')}</h3><button class="nb-x" aria-label="とじる">とじる</button></div>
     <div class="nb-tabs">${tabs.map(([k, n]) => `<button data-k="${k}" class="${k === nbTab ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="nb-body"></div>`;
-  m.querySelector('.nb-x').onclick = () => { if (nbSel) snd.deduce(false); nbSel = null; m.remove(); };
+  m.querySelector('.nb-x').onclick = () => { if (nbSel) snd.deduce(false); nbSel = null; m.remove(); const f = nbAfter; nbAfter = null; if (f) f(); };
   m.querySelectorAll('.nb-tabs button').forEach(b => b.onclick = () => { nbTab = b.dataset.k; nbSel = null; openNotebook(); });
   document.body.appendChild(m);
   const body = m.querySelector('.nb-body');
@@ -1230,7 +1239,7 @@ const sim = {
     Object.keys(ch().locations).forEach(k => { if (k !== S.loc && avail(k)) a.push({ t: 'move', k }); });
     if (ch().think) a.push({ t: 'think' });
     here().forEach(p => { const ts = topicsOf(p); if (ts) ts.forEach(tp => a.push({ t: 'topic', p, tp })); else a.push({ t: 'talk', p }); });
-    Object.keys(loc().objs || {}).forEach(o => a.push({ t: 'look', o }));
+    objsHere().forEach(([o]) => a.push({ t: 'look', o }));
     S.items.forEach(i => here().forEach(p => a.push({ t: 'show', i, p })));
     if (ch().accuse) accusable().forEach(p => a.push({ t: 'accuse', p }));
     const cs = ch().contradictions || [];
@@ -1261,7 +1270,7 @@ const sim = {
 };
 
 document.title = D.title;
-window.__mg = { get state() { return S; }, get sound() { return snd.state; }, flow: cid => flowGraph(cid), openFlow, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
+window.__mg = { get state() { return S; }, get sound() { return snd.state; }, flow: cid => flowGraph(cid), openFlow, openBoard, openPuzzle, cond, D, openNotebook, toastLog, sim, startChapter: id => { $('wrap').classList.remove('hide'); startChapter(id); } };
 preload().then(failed => {
   $('loading').classList.add('hide');
   toTitle();
