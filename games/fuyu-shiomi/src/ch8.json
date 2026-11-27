@@ -401,5 +401,5 @@
  },
  "showDefault": "佐伯は、黙って海を見ている。",
  "contradictions": [],
- "audio": {"bgm": "fuyu_confront", "hush": true}
+ "audio": {"bgm": "fuyu_confront", "hush": true, "deduce": "fuyu_final"}
 }

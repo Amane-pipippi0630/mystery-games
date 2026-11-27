@@ -170,6 +170,7 @@ def check_audio(c, g):
     for cid, ch in g["chapters"].items():
         CA = ch.get("audio", {})
         need(f"{cid}.audio.bgm", CA.get("bgm"))
+        need(f"{cid}.audio.deduce", CA.get("deduce"))
         for l, n in CA.get("amb", {}).items():
             if l not in ch["locations"]:
                 c.err(f"{cid}.audio.amb", f"場所 {l} はこの章にありません")

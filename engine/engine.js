@@ -192,7 +192,7 @@ const back = ['もどる', () => main(), 'back'];
 const nextBtn = fn => btns([['つぎへ', fn, 'primary']], null, 'one');
 
 // ---------- 音 ----------
-// game.json の audio: {base, title, bgm, deduce, ending, step, amb: {場所id: 環境音}}。章は audio: {bgm, amb, hush}
+// game.json の audio: {base, title, bgm, deduce, ending, step, amb: {場所id: 環境音}}。章は audio: {bgm, amb, hush, deduce}（deduce はその章の推理の曲）
 // イベントは "bgm"（そのイベントのあいだ流す。"bgmKeep": true でそのまま）と "hush"（いったん無音にする）
 // ブラウザは最初のタップまで音を出せないので、タップされるまでは「何を流すか」だけ覚えておく
 const snd = (() => {
@@ -226,10 +226,11 @@ const snd = (() => {
     if (v > 0 && t.el.paused) t.el.play().catch(() => {});
     if (v === 0) setTimeout(() => { if (t.v === 0 && !t.hold) t.el.pause(); }, sec * 1000 + 50);
   }
+  const dd = () => { const C = S && D.chapters[S.chapter]; return (C && C.audio && C.audio.deduce) || A.deduce; };
   const level = kind => kind === 'amb' ? (deduce ? 0 : VOL.amb * vol.amb / 100) : (cur.amb && !deduce ? VOL.bgmUnder : VOL.bgm) * vol.bgm / 100;
   function apply(kind, sec = 1.2) {
     if (!A || !ctx) return;
-    const n = kind === 'bgm' && deduce && A.deduce ? A.deduce : want[kind];
+    const n = kind === 'bgm' && deduce && dd() ? dd() : want[kind];
     if (cur[kind] && cur[kind] !== n) setVol(track(cur[kind], true), 0, sec);
     cur[kind] = n;
     if (n) { const t = track(n, !/_ending$/.test(n)); if (t.el.ended) t.el.currentTime = 0; setVol(t, level(kind), sec); }
@@ -243,7 +244,7 @@ const snd = (() => {
   }
   if (A && !SIM) ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, unlock, { capture: true }));
   return {
-    get state() { return { on: anyOn(), vol: Object.assign({}, vol), bgm: cur.bgm || want.bgm, amb: cur.amb || want.amb, deduce, playing: Object.entries(tracks).filter(([, t]) => !t.el.paused && t.v > 0).map(([n, t]) => n + '@' + t.el.currentTime.toFixed(1)) }; },
+    get state() { return { on: anyOn(), vol: Object.assign({}, vol), bgm: cur.bgm || (deduce && dd() ? dd() : want.bgm), amb: cur.amb || want.amb, deduce, playing: Object.entries(tracks).filter(([, t]) => !t.el.paused && t.v > 0).map(([n, t]) => n + '@' + t.el.currentTime.toFixed(1)) }; },
     bgm(n) { if (SIM || !A || want.bgm === (n || null)) return; want.bgm = n || null; if (!hushT) apply('bgm'); },
     amb(n) { if (SIM || !A || want.amb === (n || null)) return; want.amb = n || null; if (!hushT) { apply('amb'); apply('bgm', 1.5); } },
     // 推理の場面：環境音を止め、推理の曲にする
@@ -256,7 +257,7 @@ const snd = (() => {
       Object.values(tracks).forEach(t => setVol(t, 0, 0.6));
       cur = { bgm: null, amb: null };
       // 次の曲はタップの最中に鳴らしはじめておく（iPhone はタップの外では新しく鳴らせない）
-      const nb = deduce && A.deduce ? A.deduce : want.bgm, pre = [nb, want.amb].filter(Boolean).map(n => track(n, !/_ending$/.test(n)));
+      const nb = deduce && dd() ? dd() : want.bgm, pre = [nb, want.amb].filter(Boolean).map(n => track(n, !/_ending$/.test(n)));
       pre.forEach(t => { t.hold = true; t.el.play().catch(() => {}); });
       hushT = setTimeout(() => { hushT = null; pre.forEach(t => { t.hold = false; }); refresh(1.5); }, ms);
     },
