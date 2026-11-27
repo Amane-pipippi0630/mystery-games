@@ -181,6 +181,11 @@ body.leaving::after{content:'開いています…';position:fixed;inset:0;z-ind
 #nbook{z-index:9}  /* 推理ボードの上でも開ける */
 .big.nbk{background:transparent;border:1.5px solid var(--accent);color:var(--accent)}
 #cmd.pad .foot button{aspect-ratio:auto;border-radius:999px;min-height:46px;font-size:14px;padding:8px 12px}#cmd.pad .foot button.back{border-radius:14px}
+#title .dbg-jump{margin-top:8px;padding:12px;border:1px dashed #e0a43a;border-radius:16px;display:flex;flex-direction:column;gap:8px;width:280px}
+#title .dbg-jump .lb{color:#e0a43a;font-size:12px}
+#title .dbg-jump select{font:inherit;font-size:13px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px}
+#title .dbg-jump .big{width:100%}
+#title .dbg-jump .st{font-size:11.5px;color:var(--sub);min-height:1em}
 
 </style>
 </head>
@@ -1171,7 +1176,7 @@ function toTitle() {
   // 前の作品をクリアしていないと遊べない（game.json の requires: [{id, title}]）。URL を直接開いたとき用
   let cl = []; try { cl = JSON.parse(localStorage.getItem('mg:cleared') || '[]'); } catch (e) {}
   const need = (D.requires || []).filter(r => !cl.includes(r.id));
-  if (need.length) {
+  if (need.length && !DEBUG) {   // デバッグ（?debug）では鍵をかけない
     t.insertAdjacentHTML('beforeend', `<p class="lock">${need.map(r => '『' + r.title + '』').join('・')}をクリアすると遊べます。</p>`);
     if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget), 'primary');
     t.classList.remove('hide');
@@ -1182,6 +1187,7 @@ function toTitle() {
   if (a && !a.state.done) add('つづきから', () => resume(a));
   if (hasAnySave()) add('ロード', () => modal('ロード', loadList()));
   if (D.hub) add('作品選択へ', e => leave(D.hub, e.currentTarget));
+  if (DEBUG) debugJumpUI(t);
   if (D.audio && D.audio.credit) t.insertAdjacentHTML('beforeend', `<p class="credit">${esc(D.audio.credit)}</p>`);
   t.classList.remove('hide');
 }
@@ -1199,6 +1205,52 @@ function newGame() {
   $('bGo').onclick = () => { pr.classList.add('hide'); begin(); };
 }
 function begin() { $('wrap').classList.remove('hide'); startChapter(D.start); }
+
+// デバッグ：好きな章から始める。前の章は、いちばん近い道筋で自動で遊んで終わりまで進め、
+// 手に入れたもの（もちもの・カード・フラグ）を持ったまま、その章のはじめに立つ
+async function debugReach(target, onStep) {
+  let cur = D.start, prev = null;
+  try {
+    while (cur !== target) {
+      onStep && onStep(cur);
+      await new Promise(r => setTimeout(r, 0));
+      // 手当たり次第に遊ぶ（tools/verify.py のランダムプレイと同じ）。章の終わりに着くまで何度かやり直す
+      let end = null;
+      for (let run = 0; run < 40 && !end; run++) {
+        sim.begin(cur, prev);
+        for (let n = 0; n < 6000 && !S.simEnd; n++) {
+          const acts = sim.actions(); if (!acts.length) break;
+          const keep = sim.get();
+          try { sim.apply(acts[Math.floor(Math.random() * acts.length)]); } catch (e) { sim.set(keep); continue; }
+          S.log = [];
+          if (n % 400 === 399) await new Promise(r => setTimeout(r, 0));
+        }
+        if (String(S.simEnd).startsWith('chapter:')) end = sim.get();
+      }
+      if (!end) throw new Error(cur + ' の終わりまで進めませんでした');
+      prev = end; cur = end.simEnd.slice(8);
+    }
+  } finally { SIM = false; }
+  return prev;
+}
+function debugJumpUI(t) {
+  const box = document.createElement('div'); box.className = 'dbg-jump';
+  box.innerHTML = `<div class="lb">デバッグ：章を選んで始める</div><select>${Object.entries(D.chapters).map(([k, C]) => `<option value="${k}">${esc(C.label || k)} ${esc(C.title || '')}</option>`).join('')}</select><button class="big">この章から始める</button><p class="st">前の章は自動で遊んで進めます（つづきのデータは上書きされます）</p>`;
+  const sel = box.querySelector('select'), btn = box.querySelector('button'), st = box.querySelector('.st');
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      const id = sel.value;
+      const prev = id === D.start ? null : await debugReach(id, c => { st.textContent = `${D.chapters[c].label || c} を自動で進めています…`; });
+      S = prev ? JSON.parse(JSON.stringify(prev)) : fresh();
+      delete S.simEnd; delete S.simPuzzle; delete S.simBoard; delete S.simChoice; delete S.simSearch;
+      $('title').classList.add('hide'); $('wrap').classList.remove('hide');
+      startChapter(id);
+    } catch (e) { st.textContent = String(e.message || e); btn.disabled = false; }
+  };
+  t.appendChild(box);
+}
+
 
 
 // ---------- 矛盾をつく ----------

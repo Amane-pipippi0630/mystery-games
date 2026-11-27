@@ -926,6 +926,24 @@ def debug_flow(b):
     return pg.errs
 
 
+@test
+def debug_jump(b):
+    """?debug のタイトルで章を選ぶと、前の章を自動で進めて、手に入れたものを持ったままその章から始まる（鍵のかかった作品も）"""
+    pg = page(b, KAMO)
+    assert pg.locator(".dbg-jump").count() == 0                   # ふだんは出ない
+    for url, ch in [(KAMO, "ch5"), (FURI, "ch8"), (FUYU, "ch8")]:
+        pg = page(b, url + "?debug")
+        pg.select_option(".dbg-jump select", ch); pg.click(".dbg-jump button")
+        pg.wait_for_function(f"window.__mg.state && window.__mg.state.chapter === '{ch}' && document.getElementById('title').classList.contains('hide')", timeout=60000)
+        assert pg.evaluate("window.__mg.state.cards.length") > 5, url
+        assert pg.locator("#wrap").is_visible()
+        if pg.errs: return pg.errs
+    pg = page(b, EPI + "?debug", cleared=[])                       # クリア記録なしでも、デバッグなら鍵がかからない
+    assert pg.locator(".lock").count() == 0 and pg.locator(".dbg-jump").count() == 1
+    pg = page(b, EPI, cleared=[]); assert pg.locator(".lock").count() == 1
+    return pg.errs
+
+
 if __name__ == "__main__":
     import subprocess
     for f in ["tests/fixtures/mini", "tests/fixtures/deadend", "tests/fixtures/extras"]:
