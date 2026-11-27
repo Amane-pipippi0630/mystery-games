@@ -127,7 +127,7 @@ function resolve(entry, key) {
 // ---------- 表示 ----------
 let typer = null, full = '', toastT;
 const toastLog = [];
-function toast(t) { toastLog.push(t); if (SIM) return; const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
+function toast(t) { toastLog.push(t); if (SIM) return; const e = $('toast'); e.textContent = t; e.classList.remove('multi'); e.classList.add('on'); if (e.offsetHeight > 48) e.classList.add('multi'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
 function say(t, meta) {
   if (t == null) return;
   if (S && !(meta && meta.nolog)) S.log.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t });

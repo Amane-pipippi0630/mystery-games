@@ -44,7 +44,9 @@ header{display:flex;align-items:center;justify-content:space-between}
 #cmd.pad button.back{border-radius:14px;aspect-ratio:auto;grid-column:1/-1;font-size:14px}
 #cmd button.primary{background:var(--accent);color:#1a1405;border-color:var(--accent);font-weight:700}
 #cmd.one{grid-template-columns:1fr}
-#toast{position:fixed;left:50%;top:72px;transform:translate(-50%,-20px);opacity:0;background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;box-shadow:0 8px 24px #0006;transition:.3s;z-index:9;pointer-events:none;white-space:nowrap}
+#toast{position:fixed;left:50%;top:72px;transform:translate(-50%,-20px);opacity:0;background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;box-shadow:0 8px 24px #0006;transition:.3s;z-index:9;pointer-events:none;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;line-height:1.5;word-break:auto-phrase;line-break:strict}
+/* 長い名前（資料の題など）は折り返す。2行になったら角を小さく */
+#toast.multi{border-radius:16px}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .screen{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,#24304a 0%,var(--bg) 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:5;text-align:center;padding:24px;overflow:auto}
 .eyebrow{color:var(--accent);font-size:12px;letter-spacing:.35em}
@@ -331,7 +333,7 @@ function resolve(entry, key) {
 // ---------- 表示 ----------
 let typer = null, full = '', toastT;
 const toastLog = [];
-function toast(t) { toastLog.push(t); if (SIM) return; const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
+function toast(t) { toastLog.push(t); if (SIM) return; const e = $('toast'); e.textContent = t; e.classList.remove('multi'); e.classList.add('on'); if (e.offsetHeight > 48) e.classList.add('multi'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); }
 function say(t, meta) {
   if (t == null) return;
   if (S && !(meta && meta.nolog)) S.log.push({ c: S.chapter, l: S.loc, p: (meta && meta.p) || null, t });
