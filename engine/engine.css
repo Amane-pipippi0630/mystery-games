@@ -87,6 +87,12 @@ header{display:flex;align-items:center;justify-content:space-between}
 .nb-entry.pinned{border-color:var(--accent)}
 .nb-entry .meta{color:var(--blue);font-size:12px;font-weight:700;margin-bottom:3px}
 .nb-entry .txt{font-size:14px;line-height:1.75;white-space:pre-wrap}
+.nb-entry.item{padding:0}
+.nb-entry.item summary{list-style:none;cursor:pointer;padding:11px 40px 11px 14px;position:relative}
+.nb-entry.item summary::-webkit-details-marker{display:none}
+.nb-entry.item summary::after{content:'';position:absolute;right:16px;top:50%;width:7px;height:7px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:translateY(-70%) rotate(45deg);transition:transform .2s}
+.nb-entry.item[open] summary::after{transform:translateY(-30%) rotate(225deg)}
+.nb-entry.item .desc{padding:0 14px 12px;font-size:13px;line-height:1.75;color:var(--sub);white-space:pre-wrap}
 .nb-entry .pin{position:absolute;right:8px;top:8px;background:transparent;border:0;font-size:20px;color:var(--sub);cursor:pointer;padding:2px 6px}
 .nb-entry .pin.on{color:var(--accent)}
 .nb-bar,.nb-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--sub)}

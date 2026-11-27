@@ -52,6 +52,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 | `titleScreen` | `eyebrow`・`title`（`<br>` 可）・`lead` |
 | `prologue` | あらすじ画面。`paragraphs`（HTML可）・`cast`（`[名前, 説明]` の配列）・`button`。なければ省略 |
 | `items` | `{id: 表示名}` |
+| `itemInfo` | もちものの説明 `{id: "説明"}`。調べが進むと変えたいときは `{id: [{"if": "flag:x", "text": "進んだあとの説明"}, {"text": "はじめの説明"}]}`（上から最初に合うもの）。手帳の「もちもの」で押すと開く。ネタバレにならないよう、手に入れたときに分かっていることだけを書く |
 | `people` | `{id: {name, short}}`。`short` は「見せる」「推理」で使う短い名前 |
 | `assistant`・`assistantHint` | 助手の人物idと、そのヒントの文（`{name}` が使える）。助手に聞くと、今いる場所でまだ大事な話（証言カードになる話）を聞いていない人がいれば、ふだんのヒントより先にこの文で教える |
 | `endings` | `{id: {bg, place, small, pages, finalBg, finalPlace, finalSmall, ranks, result}}` |
@@ -165,7 +166,7 @@ python3 tools/build.py tests/fixtures/mini && python3 tests/run.py
 |---|---|
 | 証言カード | `card` の付いた返事。☆でピン留めでき、ピン留めだけに絞り込める |
 | 会話ログ | 表示した文すべて（新しい順）。ことば検索、話した人・場所・章で絞り込み、ピン留め |
-| もちもの | 持っているアイテム |
+| もちもの | 持っているアイテム。押すと説明（`itemInfo`）が開く |
 | メモ | 自由に書けるメモ。ゲームの進み方には関係しない |
 | これまで | 今の章までの `recap` |
 

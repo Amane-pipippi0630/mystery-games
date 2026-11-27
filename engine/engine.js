@@ -1193,9 +1193,21 @@ function nbDocs(body) {
   const ds = S.docs || [];
   body.innerHTML = ds.length ? ds.map(k => `<div class="nb-entry doc"><div class="meta">${esc(D.docs[k].title)}</div><div class="txt">${esc(D.docs[k].text)}</div></div>`).join('') : '<p class="nb-empty">まだ資料はありません。</p>';
 }
-function nbItems(body) {
-  body.innerHTML = S.items.length ? S.items.map(i => `<div class="nb-entry"><div class="txt">${esc(D.items[i])}</div></div>`).join('') : '<p class="nb-empty">まだ何も持っていない。</p>';
+// もちものの説明：game.json の itemInfo: {id: "説明" | [{"if": "条件", "text": "説明"}, …]}（上から最初に合うもの。調べが進むと説明を変えられる）
+function itemInfo(i) {
+  const v = D.itemInfo && D.itemInfo[i];
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  const r = v.find(r => cond(r.if)); return r ? r.text : '';
 }
+function nbItems(body) {
+  // 押すと説明が開く（開いたものは、タブを切り替えても開いたまま）
+  body.innerHTML = S.items.length ? S.items.map(i => { const t = itemInfo(i);
+    return t ? `<details class="nb-entry item" data-i="${esc(i)}"${nbOpenItems.has(i) ? ' open' : ''}><summary class="txt">${esc(D.items[i])}</summary><div class="desc">${esc(t)}</div></details>`
+             : `<div class="nb-entry"><div class="txt">${esc(D.items[i])}</div></div>`; }).join('') : '<p class="nb-empty">まだ何も持っていない。</p>';
+  body.querySelectorAll('details.item').forEach(d => d.addEventListener('toggle', () => { d.open ? nbOpenItems.add(d.dataset.i) : nbOpenItems.delete(d.dataset.i); }));
+}
+const nbOpenItems = new Set();
 function nbMemo(body) {
   body.innerHTML = '<p class="nb-note">自分用のメモです。ゲームの進み方には関係しません。</p><textarea id="memo" placeholder="気づいたことを書いておこう"></textarea>';
   const t = body.querySelector('textarea'); t.value = S.memo || '';

@@ -197,6 +197,16 @@ def check(g):
     if g["start"] not in g["chapters"]:
         c.err("game", f"start の章 {g['start']} がありません")
     check_audio(c, g)
+    # もちものの説明（itemInfo: {id: "説明" または [{"if": 条件, "text": 説明}, …]}。上から最初に合うもの）
+    ch0 = next(iter(g["chapters"].values()))
+    for it, v in g.get("itemInfo", {}).items():
+        if it not in g["items"]:
+            c.err(f"itemInfo.{it}", f"アイテム {it} は items にありません")
+        for r in (v if isinstance(v, list) else []):
+            c.cond(f"itemInfo.{it}", r.get("if"), ch0)
+    nodesc = [it for it in g["items"] if g.get("itemInfo") is not None and it not in g["itemInfo"]]
+    if nodesc:
+        c.warn("itemInfo", "説明のないもちもの：" + "、".join(nodesc))
     bgs = g["assets"]["bg"]
     for eid, e in g.get("endings", {}).items():
         for k in ("bg", "finalBg"):
